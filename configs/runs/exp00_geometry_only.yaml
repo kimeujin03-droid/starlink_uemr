@@ -1,0 +1,20 @@
+site:
+  lat_deg: -30.7215
+  lon_deg: 21.4283
+  elev_m: 1050.0
+
+tle_path: "../data/raw/tle/starlink_sample.tle"
+satellite_name: "STARLINK"
+
+time:
+  start_jd: 2460400.25
+  n_times: 180
+  dt_sec: 10.0
+
+freq:
+  start_hz: 110000000.0
+  stop_hz: 190000000.0
+  n_freqs: 256
+
+baseline:
+  enu_m: [14.6, 0.0, 0.0]
