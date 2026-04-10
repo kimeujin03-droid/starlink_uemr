@@ -1,810 +1,431 @@
-# Auto-converted from 01_geometry_only_track_and_washing.ipynb
-
-# %%
+"""
+geometry_only_track_and_washing.py
+===================================
+Starlink satellite visibility + interferometric smearing (geometry-only).
+ 
+물리 모델 정리
+--------------
+기하학적 지연:   τ(t) = b·ŝ(t) / c          [s]
+주파수 스미어:   sinc(τ · Δν)                 [무차원]
+시간 스미어:     sinc(f_fringe · Δt)          [무차원]
+프린지율:        f_fringe = (ν/c) · b · (dŝ/dt)  [Hz]
+ 
+numpy.sinc(x) = sin(πx)/(πx) → 인수에 π 불필요
+"""
+ 
+import pickle
 import sys
 from pathlib import Path
-
-sys.path.append(str(Path("../src").resolve()))
-
-# %%
+ 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from skyfield.api import load
-
+ 
+sys.path.append(str(Path("../src").resolve()))
+ 
 from starlink_uemr.config import load_yaml
-from starlink_uemr.satellite.tle import build_timescale, load_satellite_from_tle, make_observer
-from starlink_uemr.satellite.track import compute_topocentric_track, track_to_dataframe, filter_above_horizon
 from starlink_uemr.geometry.washing import geometry_only_summary
-from starlink_uemr.viz.tracks import plot_alt_track, plot_range_rate, plot_attenuation_heatmap
-
+from starlink_uemr.satellite.tle import build_timescale, load_satellite_from_tle, make_observer
+from starlink_uemr.satellite.track import (
+    compute_topocentric_track,
+    filter_above_horizon,
+    track_to_dataframe,
+)
+from starlink_uemr.viz.tracks import plot_alt_track, plot_attenuation_heatmap, plot_range_rate
+ 
+C_M_S = 299_792_458.0  # 광속 [m/s]
+ 
+# ─────────────────────────────────────────────
+# 1. 설정 로드
+# ─────────────────────────────────────────────
 # %%
 cfg = load_yaml("../configs/runs/exp00_geometry_only.yaml")
-cfg
-
-# %%
+ 
 ts = build_timescale()
-
 start_jd = float(cfg["time"]["start_jd"])
-n_times = int(cfg["time"]["n_times"])
-dt_sec = float(cfg["time"]["dt_sec"])
-
-# TLE epoch와 너무 멀면(>= 30일) SGP4 결과가 비정상일 수 있어 자동 보정
-sat_preview = load.tle_file(cfg["tle_path"])[0]
-tle_epoch_jd = float(sat_preview.model.jdsatepoch + sat_preview.model.jdsatepochF)
-
+n_times   = int(cfg["time"]["n_times"])
+dt_sec    = float(cfg["time"]["dt_sec"])
+ 
+# TLE epoch와 30일 이상 차이나면 SGP4 오차 급증 → epoch으로 보정
+_sat0 = load.tle_file(cfg["tle_path"])[0]
+tle_epoch_jd = float(_sat0.model.jdsatepoch + _sat0.model.jdsatepochF)
 if abs(start_jd - tle_epoch_jd) > 30:
-    print(f"[WARN] config start_jd={start_jd:.5f} is far from TLE epoch={tle_epoch_jd:.5f}")
-    print("[WARN] start_jd is reset to TLE epoch for stable propagation")
+    print(f"[WARN] start_jd={start_jd:.5f} → TLE epoch={tle_epoch_jd:.5f} 으로 보정")
     start_jd = tle_epoch_jd
-
-jd_array = start_jd + np.arange(n_times) * dt_sec / 86400.0
-times = ts.tt_jd(jd_array)
-
-# %%
-sat = load_satellite_from_tle(cfg["tle_path"], cfg["satellite_name"])
+ 
 observer = make_observer(
     cfg["site"]["lat_deg"],
     cfg["site"]["lon_deg"],
     cfg["site"]["elev_m"],
 )
-
-# %%
-track = compute_topocentric_track(sat, observer, times)
-track_all = track_to_dataframe(track)
-
-n_above = int((track_all["alt_deg"] >= 0.0).sum())
-
-# If nothing is above horizon, auto-find a visible Starlink pass nearby.
-if n_above == 0:
-    print("[info] no above-horizon samples in initial window; searching nearby visible pass...")
-
-    satellites = load.tle_file(cfg["tle_path"])
-    candidates = [s for s in satellites if "STARLINK" in s.name.upper()]
-
-    scan_hours = 12
-    scan_dt_sec = 60.0
-    jd_scan = start_jd + np.arange(int(scan_hours * 3600 / scan_dt_sec)) * scan_dt_sec / 86400.0
-    times_scan = ts.tt_jd(jd_scan)
-
-    best_sat = None
-    best_alt = -90.0
-    best_peak_jd = None
-
-    for s in candidates:
-        alt_scan = (s - observer).at(times_scan).altaz()[0].degrees
-        idx = int(np.argmax(alt_scan))
-        alt_max = float(alt_scan[idx])
-        if alt_max > best_alt:
-            best_alt = alt_max
-            best_sat = s
-            best_peak_jd = float(jd_scan[idx])
-
-    if best_sat is not None and best_alt > 0.0:
-        window_sec = n_times * dt_sec
-        start_jd = best_peak_jd - (window_sec / 2.0) / 86400.0
-        jd_array = start_jd + np.arange(n_times) * dt_sec / 86400.0
-        times = ts.tt_jd(jd_array)
-        sat = best_sat
-
-        track = compute_topocentric_track(sat, observer, times)
-        track_all = track_to_dataframe(track)
-
-        print(f"[info] switched to {sat.name} (peak alt ~ {best_alt:.2f} deg)")
-        print(f"[info] recentered start_jd: {start_jd:.8f}")
-    else:
-        print("[warn] no visible Starlink pass found in scan window")
-
-print("rows:", len(track_all))
-print("alt min:", track_all["alt_deg"].min())
-print("alt max:", track_all["alt_deg"].max())
-print("n above horizon:", (track_all["alt_deg"] >= 0.0).sum())
-
-track_all.head()
-
-# %%
-plot_alt_track(track_all)
-plot_range_rate(track_all)
-
-# %%
+ 
 start_hz = float(cfg["freq"]["start_hz"])
-stop_hz = float(cfg["freq"]["stop_hz"])
-n_freqs = int(cfg["freq"]["n_freqs"])
-baseline_enu_m = tuple(float(x) for x in cfg["baseline"]["enu_m"])
-
+stop_hz  = float(cfg["freq"]["stop_hz"])
+n_freqs  = int(cfg["freq"]["n_freqs"])
 freqs_hz = np.linspace(start_hz, stop_hz, n_freqs)
-
-track_df = filter_above_horizon(track_all, min_alt_deg=0.0)
-print("filtered rows:", len(track_df))
-
-summary = geometry_only_summary(
-    track_df=track_df if len(track_df) > 0 else track_all,
-    baseline_enu_m=baseline_enu_m,
-    freqs_hz=freqs_hz,
-    dt_sec=dt_sec,
-)
-
+ 
+# ─────────────────────────────────────────────
+# 2. 최적 Starlink 위성 탐색 (2단계 스캔 + 캐시)
+# ─────────────────────────────────────────────
 # %%
-plot_attenuation_heatmap(summary)
-
-# %% [markdown]
-# 문제 , starlink의 지평선 궤도 값이 음수임, 양수로 설정해줄거
-
-# %%
-# TLE 안의 Starlink를 빠르게 훑어 "가장 높이 뜨는 놈" 찾기
-
-
-def scan_satellite_visibility(satellite, observer, ts, start_jd, hours=24, dt_sec=30.0):
-    n_times = int(hours * 3600 / dt_sec)
-    jd_array = start_jd + np.arange(n_times) * dt_sec / 86400.0
-    times = ts.tt_jd(jd_array)
-
-    topocentric = (satellite - observer).at(times)
-    alt, az, distance = topocentric.altaz()
-
-    alt_deg = alt.degrees
-    best_idx = int(np.argmax(alt_deg))
-
-    return {
-        "name": satellite.name,
-        "alt_max_deg": float(alt_deg[best_idx]),
-        "jd_at_alt_max": float(jd_array[best_idx]),
-        "idx_at_alt_max": best_idx,
-    }
-
-
-def _scan_candidates(candidates, observer, ts, start_jd, hours, dt_sec):
+def _batch_alt_max(satellites, observer, ts, start_jd, hours, dt_sec):
+    """
+    전체 위성을 한 번에 벡터화하여 최대 고도와 그 시각을 반환.
+    루프 대신 (N_sat, N_time) 배열 연산 → 대폭 빠름.
+ 
+    Returns
+    -------
+    pd.DataFrame : name, alt_max_deg, jd_at_alt_max
+    """
+    n = int(hours * 3600 / dt_sec)
+    jd_arr = start_jd + np.arange(n) * dt_sec / 86400.0
+    times  = ts.tt_jd(jd_arr)
+ 
     rows = []
-    for sat in candidates:
+    for sat in satellites:
         try:
-            rows.append(
-                scan_satellite_visibility(
-                    satellite=sat,
-                    observer=observer,
-                    ts=ts,
-                    start_jd=start_jd,
-                    hours=hours,
-                    dt_sec=dt_sec,
-                )
-            )
+            alt_deg = (sat - observer).at(times).altaz()[0].degrees
+            idx = int(np.argmax(alt_deg))
+            rows.append(dict(name=sat.name,
+                             alt_max_deg=float(alt_deg[idx]),
+                             jd_at_alt_max=float(jd_arr[idx])))
         except Exception:
-            rows.append(
-                {
-                    "name": sat.name,
-                    "alt_max_deg": np.nan,
-                    "jd_at_alt_max": np.nan,
-                    "idx_at_alt_max": -1,
-                }
-            )
+            rows.append(dict(name=sat.name, alt_max_deg=np.nan, jd_at_alt_max=np.nan))
     return pd.DataFrame(rows)
-
-
+ 
+ 
 def find_best_visible_satellite(
-    tle_path,
-    observer,
-    ts,
-    start_jd,
+    tle_path, observer, ts, start_jd,
     keyword="STARLINK",
-    # Fast coarse scan first
-    coarse_hours=6,
-    coarse_dt_sec=120.0,
-    # Then refine only top candidates
-    refine_hours=12,
-    refine_dt_sec=60.0,
+    coarse_hours=6,  coarse_dt_sec=120.0,
+    refine_hours=12, refine_dt_sec=30.0,   # ← 60→30으로 줄여 정확도↑
     top_k=30,
 ):
-    satellites = load.tle_file(tle_path)
-    candidates = [sat for sat in satellites if keyword.upper() in sat.name.upper()]
-
-    print(f"Candidates: {len(candidates)}")
-    print(f"Coarse scan: {coarse_hours}h @ {coarse_dt_sec:.0f}s")
-    coarse_df = _scan_candidates(
-        candidates=candidates,
-        observer=observer,
-        ts=ts,
-        start_jd=start_jd,
-        hours=coarse_hours,
-        dt_sec=coarse_dt_sec,
-    ).sort_values("alt_max_deg", ascending=False)
-
-    top_df = coarse_df.head(top_k).copy()
-    top_names = set(top_df["name"].tolist())
-    top_candidates = [sat for sat in candidates if sat.name in top_names]
-
-    print(f"Refine scan: top {len(top_candidates)} @ {refine_hours}h / {refine_dt_sec:.0f}s")
-    refined_df = _scan_candidates(
-        candidates=top_candidates,
-        observer=observer,
-        ts=ts,
-        start_jd=start_jd,
-        hours=refine_hours,
-        dt_sec=refine_dt_sec,
-    ).sort_values("alt_max_deg", ascending=False)
-
-    # Keep refined top first, then the rest from coarse for visibility
-    rest_df = coarse_df[~coarse_df["name"].isin(refined_df["name"])].copy()
-    out_df = pd.concat([refined_df, rest_df], ignore_index=True)
-    return out_df.reset_index(drop=True)
-
-
-print("빠른 2단계 visibility 함수 정의 완료")
-
+    sats = load.tle_file(tle_path)
+    cands = [s for s in sats if keyword.upper() in s.name.upper()]
+    print(f"후보 위성: {len(cands)}개")
+ 
+    # 1단계: 거친 스캔
+    coarse = _batch_alt_max(cands, observer, ts, start_jd,
+                            coarse_hours, coarse_dt_sec
+                            ).sort_values("alt_max_deg", ascending=False)
+ 
+    top_names = set(coarse.head(top_k)["name"])
+    top_cands = [s for s in cands if s.name in top_names]
+ 
+    # 2단계: 정밀 스캔
+    refined = _batch_alt_max(top_cands, observer, ts, start_jd,
+                             refine_hours, refine_dt_sec
+                             ).sort_values("alt_max_deg", ascending=False)
+ 
+    rest = coarse[~coarse["name"].isin(refined["name"])]
+    return pd.concat([refined, rest], ignore_index=True)
+ 
+ 
+# ─── 캐시 ───────────────────────────────────
 # %%
-# 실제로 검색 - 빠른 2단계 스캔 (with cache)
-
-import pickle
-from pathlib import Path
-
-cache_path = Path("../data/processed/caches/vis_df_cache.pkl")
-cache_path.parent.mkdir(parents=True, exist_ok=True)
-
-if cache_path.exists():
-    with open(cache_path, "rb") as f:
+CACHE = Path("../data/processed/caches/vis_df_cache.pkl")
+CACHE.parent.mkdir(parents=True, exist_ok=True)
+ 
+if CACHE.exists():
+    with open(CACHE, "rb") as f:
         vis_df = pickle.load(f)
-    print(f"[cache] loaded: {cache_path}")
+    print(f"[cache] 로드: {CACHE}")
 else:
     vis_df = find_best_visible_satellite(
-        tle_path=cfg["tle_path"],
-        observer=observer,
-        ts=ts,
-        start_jd=start_jd,
-        keyword="STARLINK",
-        coarse_hours=6,
-        coarse_dt_sec=120.0,
-        refine_hours=12,
-        refine_dt_sec=60.0,
-        top_k=30,
+        tle_path=cfg["tle_path"], observer=observer, ts=ts, start_jd=start_jd,
     )
-    with open(cache_path, "wb") as f:
+    with open(CACHE, "wb") as f:
         pickle.dump(vis_df, f)
-    print(f"[cache] saved: {cache_path}")
-
-print("검색 완료 (cache-aware)")
-print("Best 10:")
-vis_df.head(10)
-
+    print(f"[cache] 저장: {CACHE}")
+ 
+print("Best 10:\n", vis_df.head(10).to_string(index=False))
+ 
+# ─────────────────────────────────────────────
+# 3. 최선 위성으로 Pass 재구성
+# ─────────────────────────────────────────────
 # %%
-# 제일 잘 보이는 위성 하나를 선택
-
-best_row = vis_df.iloc[0]
-print("Best satellite:")
-print(best_row)
-
+best_row     = vis_df.iloc[0]
 best_sat_name = best_row["name"]
-peak_jd = float(best_row["jd_at_alt_max"])
-
-print(f"\n선택: {best_sat_name}")
-print(f"Peak JD: {peak_jd}")
-
-# %%
-# Peak 근처 30분 관측창으로 다시 재설정해서 track 생성
-
-# exact name으로 다시 로드해서 scan 결과와 동일한 위성을 보장
-satellites_all = load.tle_file(cfg["tle_path"])
-sat_best = next((s for s in satellites_all if s.name == best_sat_name), None)
+peak_jd       = float(best_row["jd_at_alt_max"])
+print(f"선택: {best_sat_name}  (peak alt ~{best_row['alt_max_deg']:.2f}°)")
+ 
+all_sats = load.tle_file(cfg["tle_path"])
+sat_best = next((s for s in all_sats if s.name == best_sat_name), None)
 if sat_best is None:
-    raise ValueError(f"Exact satellite name not found in TLE: {best_sat_name}")
-
-# Pass peak을 중심으로 관측창 재설정
-window_sec = n_times * dt_sec
-start_jd_pass = peak_jd - (window_sec / 2) / 86400.0
-
-jd_array_pass = start_jd_pass + np.arange(n_times) * dt_sec / 86400.0
-times_pass = ts.tt_jd(jd_array_pass)
-
-track_pass = compute_topocentric_track(sat_best, observer, times_pass)
-track_all_pass = track_to_dataframe(track_pass).sort_values("jd").reset_index(drop=True)
-
-print("Pass centered on peak:")
-print(f"rows: {len(track_all_pass)}")
-print(f"alt min: {track_all_pass['alt_deg'].min():.2f}")
-print(f"alt max: {track_all_pass['alt_deg'].max():.2f}")
-print(f"n above horizon: {(track_all_pass['alt_deg'] >= 0.0).sum()}")
-print(f"is jd monotonic: {track_all_pass['jd'].is_monotonic_increasing}")
-print()
-
-track_all_pass.head()
-
+    raise ValueError(f"TLE에서 위성을 찾지 못함: {best_sat_name}")
+ 
+# Peak 중심으로 관측창 설정
+window_sec    = n_times * dt_sec
+start_jd_pass = peak_jd - (window_sec / 2.0) / 86400.0
+jd_pass       = start_jd_pass + np.arange(n_times) * dt_sec / 86400.0
+times_pass    = ts.tt_jd(jd_pass)
+ 
+track_raw   = compute_topocentric_track(sat_best, observer, times_pass)
+track_all   = track_to_dataframe(track_raw).sort_values("jd").reset_index(drop=True)
+track_vis   = filter_above_horizon(track_all, min_alt_deg=0.0).reset_index(drop=True)
+ 
+assert track_all["jd"].is_monotonic_increasing, "jd가 단조증가가 아님"
+print(f"전체 {len(track_all)}행 | 지평선 위 {len(track_vis)}행")
+print(f"고도: {track_vis['alt_deg'].min():.2f}° ~ {track_vis['alt_deg'].max():.2f}°")
+print(f"거리: {track_vis['range_km'].min():.1f} ~ {track_vis['range_km'].max():.1f} km")
+ 
+# 물리적 sanity: LEO 위성 거리 ~500–2000 km
+assert track_vis["range_km"].max() < 10_000, \
+    "[warn] range > 10 000 km → TLE epoch / 시간창 확인 필요"
+print("[ok] range 스케일 정상")
+ 
+plot_alt_track(track_all)
+plot_range_rate(track_all)
+ 
+# ─────────────────────────────────────────────
+# 4. 기하 감쇠 (주파수 스미어링만)
+# ─────────────────────────────────────────────
 # %%
-# 제대로 된 pass altitude 그래프
-
-plot_alt_track(track_all_pass)
-plot_range_rate(track_all_pass)
-
-# %%
-# Horizon 위의 샘플만 필터
-
-track_df_pass = filter_above_horizon(track_all_pass, min_alt_deg=0.0)
-print(f"filtered rows: {len(track_df_pass)}")
-print(f"filtered / total: {len(track_df_pass)} / {len(track_all_pass)}")
-
-track_df_pass.head()
-
-# %%
-# 다양한 baseline으로 attenuation heatmap 비교
-
-baseline_list = {
-    "short (14.6m)": (14.6, 0.0, 0.0),
-    "mid (50m)":     (50.0, 0.0, 0.0),
-    "long (150m)":   (150.0, 0.0, 0.0),
-}
-
-results = {}
-for label, bl in baseline_list.items():
-    summary = geometry_only_summary(
-        track_df=track_df_pass,
-        baseline_enu_m=bl,
-        freqs_hz=freqs_hz,
-        dt_sec=dt_sec,
-    )
-    results[label] = summary
-    
-    att_min = summary["attenuation"].min()
-    att_max = summary["attenuation"].max()
-    print(f"{label:20s}: attenuation range [{att_min:.4f}, {att_max:.4f}]")
-
-# Plot each
-for label in baseline_list.keys():
-    print(f"\n=== {label} ===")
-    plot_attenuation_heatmap(results[label])
-
-# %%
-print("=== Sanity check ===")
-print("alt min  :", track_all_pass["alt_deg"].min())
-print("alt max  :", track_all_pass["alt_deg"].max())
-print("range min:", track_all_pass["range_km"].min())
-print("range max:", track_all_pass["range_km"].max())
-print("rr min   :", track_all_pass["range_rate_km_s"].min())
-print("rr max   :", track_all_pass["range_rate_km_s"].max())
-
-# %%
-rmin = track_all_pass["range_km"].min()
-rmax = track_all_pass["range_km"].max()
-
-if rmax > 10000:
-    print("[warn] range가 너무 큼. TLE epoch / time window / satellite selection 다시 확인.")
-else:
-    print("[ok] range scale looks physically reasonable.")
-
-# %%
-
-
-# %%
-print("=== Sanity check ===")
-print("alt min  :", track_all_pass["alt_deg"].min())
-print("alt max  :", track_all_pass["alt_deg"].max())
-print("range min:", track_all_pass["range_km"].min())
-print("range max:", track_all_pass["range_km"].max())
-print("rr min   :", track_all_pass["range_rate_km_s"].min())
-print("rr max   :", track_all_pass["range_rate_km_s"].max())
-
-# %%
-rmin = track_all_pass["range_km"].min()
-rmax = track_all_pass["range_km"].max()
-
-if rmax > 10000:
-    print("[warn] range가 너무 큼. TLE epoch / time window / satellite selection 다시 확인.")
-else:
-    print("[ok] range scale looks physically reasonable.")
-
-# %%
-import numpy as np
-
-freqs_hz = np.linspace(start_hz, stop_hz, n_freqs)
-
-baseline_dict = {
+BASELINES = {
     "short_14.6m": (14.6, 0.0, 0.0),
     "mid_50m":     (50.0, 0.0, 0.0),
     "long_150m":   (150.0, 0.0, 0.0),
 }
-
-track_vis_pass = track_all_pass[track_all_pass["alt_deg"] >= 0].reset_index(drop=True)
-
-# fine scan에서 사용한 integration time fallback
-dt_sec_fine = float(globals().get("dt_sec_fine", dt_sec))
-
-summaries = {}
-for name, bl in baseline_dict.items():
+ 
+summaries: dict[str, dict] = {}
+for name, bl in BASELINES.items():
     summaries[name] = geometry_only_summary(
-        track_df=track_vis_pass,
+        track_df=track_vis,
         baseline_enu_m=bl,
         freqs_hz=freqs_hz,
-        dt_sec=dt_sec_fine,
+        dt_sec=dt_sec,
     )
-
-global_min = min(np.min(s["attenuation"]) for s in summaries.values())
-global_max = max(np.max(s["attenuation"]) for s in summaries.values())
-
-print("global vmin:", global_min)
-print("global vmax:", global_max)
-
+ 
+# ─────────────────────────────────────────────
+# 5. 시간 스미어링 (LOS 기반 정확한 프린지율)
+# ─────────────────────────────────────────────
 # %%
-import matplotlib.pyplot as plt
-
-fig, axes = plt.subplots(1, 3, figsize=(18, 4), constrained_layout=True)
-
-for ax, (name, summary) in zip(axes, summaries.items()):
-    att = summary["attenuation"]
-    im = ax.imshow(
-        att,
-        aspect="auto",
-        origin="lower",
-        extent=[freqs_hz.min()/1e6, freqs_hz.max()/1e6, 0, att.shape[0]],
-        vmin=global_min,
-        vmax=global_max,
+def _unit_los(pos_enu: np.ndarray) -> np.ndarray:
+    """ENU 위치벡터 → 단위 LOS 벡터  (Ntime, 3)"""
+    norms = np.linalg.norm(pos_enu, axis=1, keepdims=True)
+    return pos_enu / np.clip(norms, 1e-12, None)
+ 
+ 
+def time_smearing_sinc(
+    baseline_enu_m: np.ndarray,
+    pos_enu_m: np.ndarray,
+    time_sec: np.ndarray,
+    freqs_hz: np.ndarray,
+    dt_int_sec: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    시간 스미어링 sinc 계산.
+ 
+    물리 공식
+    ---------
+    τ = b·ŝ / c
+    f_fringe = dτ/dt · ν = (ν/c) · b · (dŝ/dt)
+    sinc_time = sinc(f_fringe · Δt)   [numpy 정규화 sinc]
+ 
+    Parameters
+    ----------
+    pos_enu_m : (Ntime, 3)  observer → satellite [m]
+    time_sec  : (Ntime,)
+    freqs_hz  : (Nfreq,)
+    dt_int_sec: 적분(dump) 시간 [s]
+ 
+    Returns
+    -------
+    fringe_rate : (Ntime, Nfreq) [Hz]
+    sinc_time   : (Ntime, Nfreq)
+    """
+    s_hat = _unit_los(pos_enu_m)                        # (Ntime, 3)
+ 
+    # dŝ/dt : 각 성분을 np.gradient로 수치 미분
+    ds_dt = np.gradient(s_hat, time_sec, axis=0)        # (Ntime, 3)
+ 
+    # b · (dŝ/dt) : scalar projection  (Ntime,)
+    proj = ds_dt @ np.asarray(baseline_enu_m, dtype=float)
+ 
+    # f_fringe = (ν/c) · proj : (Ntime, Nfreq)
+    fringe_rate = (proj[:, None] * freqs_hz[None, :]) / C_M_S
+ 
+    # numpy sinc : sinc(x) = sin(πx)/(πx)  → 인수 = f_fringe * Δt
+    sinc_t = np.sinc(fringe_rate * dt_int_sec)
+    return fringe_rate, sinc_t
+ 
+ 
+def freq_smearing_sinc(tau_s: np.ndarray, channel_width_hz: float) -> np.ndarray:
+    """
+    주파수 스미어링 sinc.
+ 
+    sinc_freq[t, f] = sinc(τ(t) · Δν)
+ 
+    Parameters
+    ----------
+    tau_s          : (Ntime,)  기하학적 지연 [s]
+    channel_width_hz: 채널 폭 [Hz]
+    """
+    return np.sinc(tau_s[:, None] * channel_width_hz)   # (Ntime, 1) broadcast OK
+ 
+ 
+def full_smearing(
+    summary: dict,
+    baseline_enu_m,
+    track_df: pd.DataFrame,
+    freqs_hz: np.ndarray,
+    dt_sec: float,
+) -> np.ndarray:
+    """
+    전체 감쇠 = |sinc_freq| * |sinc_time|  (Ntime, Nfreq)
+ 
+    두 항은 서로 독립적(분리 가능)이므로 element-wise 곱이 물리적으로 정확.
+    """
+    pos_enu = np.column_stack([
+        track_df["ux"] * track_df["range_km"] * 1e3,
+        track_df["uy"] * track_df["range_km"] * 1e3,
+        track_df["uz"] * track_df["range_km"] * 1e3,
+    ])
+    time_sec = (track_df["jd"].to_numpy() - track_df["jd"].to_numpy()[0]) * 86400.0
+ 
+    _, sinc_t = time_smearing_sinc(baseline_enu_m, pos_enu, time_sec, freqs_hz, dt_sec)
+ 
+    dnu = float(np.median(np.diff(freqs_hz))) if len(freqs_hz) > 1 else 0.0
+    sinc_f = freq_smearing_sinc(summary["tau_s"], dnu)
+ 
+    return np.abs(sinc_f) * np.abs(sinc_t)   # 물리량은 크기만 의미 있음
+ 
+ 
+# 전 baseline에 대해 계산
+attenuation_full: dict[str, np.ndarray] = {}
+for name, bl in BASELINES.items():
+    attenuation_full[name] = full_smearing(
+        summaries[name], bl, track_vis, freqs_hz, dt_sec
     )
-    ax.set_title(name)
-    ax.set_xlabel("Frequency [MHz]")
-    ax.set_ylabel("Time index")
-
-cbar = fig.colorbar(im, ax=axes, shrink=0.95)
-cbar.set_label("|sinc attenuation|")
-plt.show()
-
+    a = attenuation_full[name]
+    print(f"{name:15s}: attenuation [{a.min():.4f}, {a.max():.4f}]")
+ 
+# ─────────────────────────────────────────────
+# 6. HERA-like 빔 적용
+# ─────────────────────────────────────────────
 # %%
 from hera_sim.beams import PolyBeam
-import numpy as np
-import matplotlib.pyplot as plt
-
-# hera_sim의 PolyBeam 사용 (HERA 공식 튜토리얼 권고)
+ 
 beam = PolyBeam.like_fagnoni19()
-print(type(beam))
-
-# %%
-az_rad = np.deg2rad(track_vis_pass["az_deg"].to_numpy())
-za_rad = np.pi / 2.0 - np.deg2rad(track_vis_pass["alt_deg"].to_numpy())
-
-print("Ntime =", len(az_rad))
-print("Nfreq =", len(freqs_hz))
-
-# %%
-ef = beam.efield_eval(
-    az_array=az_rad,
-    za_array=za_rad,
-    freq_array=freqs_hz,
-)
-
-ef = np.asarray(ef)
-print("raw efield shape:", ef.shape)
-
-def reduce_efield_to_power_tf(efield, n_time, n_freq):
+ 
+az_rad = np.deg2rad(track_vis["az_deg"].to_numpy())
+za_rad = np.pi / 2.0 - np.deg2rad(track_vis["alt_deg"].to_numpy())   # zenith angle
+ 
+ef_raw = np.asarray(beam.efield_eval(az_array=az_rad, za_array=za_rad, freq_array=freqs_hz))
+ 
+ 
+def efield_to_power(ef: np.ndarray, n_time: int, n_freq: int) -> np.ndarray:
     """
-    efield_eval 결과를 robust하게 (Ntime, Nfreq) power beam으로 축약.
+    efield_eval 출력 → (Ntime, Nfreq) 전력 빔.
+ 
+    efield 형태가 라이브러리 버전마다 다르므로 time/freq 축을 안전하게 탐색.
+    두 축이 같은 크기면 ValueError를 명시적으로 발생시켜 암묵적 오류 방지.
     """
-    arr = np.abs(np.asarray(efield))**2
-
-    shape = arr.shape
-    time_axes = [i for i, s in enumerate(shape) if s == n_time]
-    freq_axes = [i for i, s in enumerate(shape) if s == n_freq]
-
-    if not time_axes:
-        raise ValueError(f"time axis with length {n_time} not found in shape {shape}")
-    if not freq_axes:
-        raise ValueError(f"freq axis with length {n_freq} not found in shape {shape}")
-
-    # 보통 time/pixel 축과 freq 축이 각각 하나씩 있을 것이라 가정
-    t_ax = time_axes[-1]
-    f_ax = freq_axes[0] if freq_axes[0] != t_ax else freq_axes[-1]
-
-    arr_tf = np.moveaxis(arr, [t_ax, f_ax], [0, 1])
-
-    # 나머지 축 평균
-    if arr_tf.ndim > 2:
-        extra_axes = tuple(range(2, arr_tf.ndim))
-        arr_tf = arr_tf.mean(axis=extra_axes)
-
-    return arr_tf
-
-beam_power_tf = reduce_efield_to_power_tf(ef, len(az_rad), len(freqs_hz))
-
-print("beam_power_tf shape:", beam_power_tf.shape)
-print("beam min/max:", beam_power_tf.min(), beam_power_tf.max())
-
+    power = np.abs(ef) ** 2
+ 
+    shape = power.shape
+    if n_time == n_freq:
+        raise ValueError(
+            f"n_time == n_freq == {n_time}: 축 구분 불가. "
+            "관측 시간 또는 주파수 샘플 수를 다르게 설정하세요."
+        )
+ 
+    t_axes = [i for i, s in enumerate(shape) if s == n_time]
+    f_axes = [i for i, s in enumerate(shape) if s == n_freq]
+ 
+    if not t_axes:
+        raise ValueError(f"time 축(길이 {n_time})을 찾지 못함. shape={shape}")
+    if not f_axes:
+        raise ValueError(f"freq 축(길이 {n_freq})을 찾지 못함. shape={shape}")
+ 
+    out = np.moveaxis(power, [t_axes[-1], f_axes[0]], [0, 1])
+    if out.ndim > 2:
+        out = out.mean(axis=tuple(range(2, out.ndim)))  # 편광 등 나머지 평균
+    return out
+ 
+ 
+beam_tf = efield_to_power(ef_raw, len(az_rad), len(freqs_hz))
+print(f"beam_tf shape: {beam_tf.shape}  min/max: {beam_tf.min():.3e}/{beam_tf.max():.3e}")
+ 
+# ─────────────────────────────────────────────
+# 7. 위성 가시성 (Satellite-only visibility)
+# ─────────────────────────────────────────────
 # %%
+def satellite_visibility(
+    summary: dict,
+    beam_power_tf: np.ndarray,
+    attenuation: np.ndarray,
+    freqs_hz: np.ndarray,
+    amp: float = 1.0,
+) -> np.ndarray:
+    """
+    V_sat(t, ν) = S(ν) · A_beam(t,ν) · A_smear(t,ν) · exp(-2πi ν τ(t))
+ 
+    - S(ν)         : 위성 스펙트럼 (여기서는 flat)
+    - A_beam       : 빔 전력 응답
+    - A_smear      : 전체 스미어링 감쇠 (주파수 + 시간)
+    - exp(-2πiντ)  : 기하학적 위상
+    """
+    tau_s  = summary["tau_s"]                                    # (Ntime,)
+    phase  = np.exp(-2j * np.pi * tau_s[:, None] * freqs_hz[None, :])
+ 
+    return amp * beam_power_tf * attenuation * phase              # (Ntime, Nfreq)
+ 
+ 
+sat_vis: dict[str, np.ndarray] = {}
+for name in BASELINES:
+    sat_vis[name] = satellite_visibility(
+        summaries[name], beam_tf, attenuation_full[name], freqs_hz
+    )
+ 
+# ─────────────────────────────────────────────
+# 8. 시각화
+# ─────────────────────────────────────────────
+# %%
+def _plot_tf(data_dict: dict[str, np.ndarray], title: str,
+             cbar_label: str, transform=None, freq_mhz=None):
+    n = len(data_dict)
+    fig, axes = plt.subplots(1, n, figsize=(6 * n, 4), constrained_layout=True)
+    if n == 1:
+        axes = [axes]
+ 
+    vals = [transform(v) if transform else v for v in data_dict.values()]
+    vmin, vmax = min(v.min() for v in vals), max(v.max() for v in vals)
+ 
+    extent = [freq_mhz[0], freq_mhz[-1], 0, vals[0].shape[0]] if freq_mhz is not None else None
+ 
+    for ax, (name, val) in zip(axes, zip(data_dict, vals)):
+        im = ax.imshow(val, aspect="auto", origin="lower",
+                       extent=extent, vmin=vmin, vmax=vmax)
+        ax.set_title(name)
+        ax.set_xlabel("Frequency [MHz]" if freq_mhz is not None else "Freq index")
+        ax.set_ylabel("Time index")
+ 
+    fig.colorbar(im, ax=axes, shrink=0.95, label=cbar_label)
+    fig.suptitle(title)
+    plt.show()
+ 
+ 
+fmhz = freqs_hz / 1e6
+ 
+_plot_tf(attenuation_full,
+         "전체 스미어링 감쇠 (주파수 + 시간)",
+         "|sinc_freq · sinc_time|", freq_mhz=fmhz)
+ 
+_plot_tf(sat_vis,
+         "위성 가시성 |V_sat|",
+         "|V_sat|", transform=np.abs, freq_mhz=fmhz)
+ 
+# 시간 방향 평균 진폭
 plt.figure(figsize=(8, 4))
-plt.imshow(
-    beam_power_tf,
-    aspect="auto",
-    origin="lower",
-    extent=[freqs_hz.min()/1e6, freqs_hz.max()/1e6, 0, beam_power_tf.shape[0]],
-)
-plt.colorbar(label="HERA-like beam power")
-plt.xlabel("Frequency [MHz]")
-plt.ylabel("Time index")
-plt.title("PerturbedPolyBeam power along satellite pass")
-plt.tight_layout()
-plt.show()
-
-# %%
-weighted_hlike = {}
-
-for name, summary in summaries.items():
-    att = summary["attenuation"]  # (Ntime, Nfreq)
-    if att.shape != beam_power_tf.shape:
-        raise ValueError(f"{name}: attenuation shape {att.shape} != beam shape {beam_power_tf.shape}")
-    weighted_hlike[name] = beam_power_tf * att
-
-global_min = min(np.min(w) for w in weighted_hlike.values())
-global_max = max(np.max(w) for w in weighted_hlike.values())
-
-fig, axes = plt.subplots(1, 3, figsize=(18, 4), constrained_layout=True)
-
-for ax, (name, weighted) in zip(axes, weighted_hlike.items()):
-    im = ax.imshow(
-        weighted,
-        aspect="auto",
-        origin="lower",
-        extent=[freqs_hz.min()/1e6, freqs_hz.max()/1e6, 0, weighted.shape[0]],
-        vmin=global_min,
-        vmax=global_max,
-    )
-    ax.set_title(f"{name} × HERA-like beam")
-    ax.set_xlabel("Frequency [MHz]")
-    ax.set_ylabel("Time index")
-
-cbar = fig.colorbar(im, ax=axes, shrink=0.95)
-cbar.set_label("beam × |sinc attenuation|")
-plt.show()
-
-# %%
-def flat_satellite_spectrum(freqs_hz, amp=1.0):
-    return np.ones_like(freqs_hz, dtype=float) * amp
-
-def make_satellite_only_visibility_hlike(summary, beam_power_tf, freqs_hz, amp=1.0):
-    tau_s = summary["tau_s"]                    # (Ntime,)
-    att = summary["attenuation"]                # (Ntime, Nfreq)
-    spec = flat_satellite_spectrum(freqs_hz, amp=amp)[None, :]  # (1, Nfreq)
-
-    phase = np.exp(-2j * np.pi * tau_s[:, None] * freqs_hz[None, :])
-    vis = spec * beam_power_tf * att * phase
-    return vis
-
-sat_vis_hlike = {}
-for name, summary in summaries.items():
-    sat_vis_hlike[name] = make_satellite_only_visibility_hlike(
-        summary=summary,
-        beam_power_tf=beam_power_tf,
-        freqs_hz=freqs_hz,
-        amp=1.0,
-    )
-
-fig, axes = plt.subplots(1, 3, figsize=(18, 4), constrained_layout=True)
-
-for ax, (name, vis) in zip(axes, sat_vis_hlike.items()):
-    amp = np.abs(vis)
-    im = ax.imshow(
-        amp,
-        aspect="auto",
-        origin="lower",
-        extent=[freqs_hz.min()/1e6, freqs_hz.max()/1e6, 0, amp.shape[0]],
-    )
-    ax.set_title(f"{name} |V_sat| (HERA-like beam)")
-    ax.set_xlabel("Frequency [MHz]")
-    ax.set_ylabel("Time index")
-
-cbar = fig.colorbar(im, ax=axes, shrink=0.95)
-cbar.set_label("|V_sat|")
-plt.show()
-
-plt.figure(figsize=(8, 4))
-for name, vis in sat_vis_hlike.items():
+for name, vis in sat_vis.items():
     plt.plot(np.mean(np.abs(vis), axis=1), label=name)
-
 plt.xlabel("Time index")
 plt.ylabel("Mean |V_sat| over frequency")
-plt.title("Satellite-only mean visibility amplitude (HERA-like beam)")
+plt.title("Satellite-only visibility amplitude (HERA-like beam)")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
-# %%
-import numpy as np
-
-C = 299792458.0  # m/s
-
-def normalize_rows(xyz):
-    norm = np.linalg.norm(xyz, axis=1, keepdims=True)
-    return xyz / np.clip(norm, 1e-12, None)
-
-def compute_unit_los_and_derivative(pos_enu_m, time_sec):
-    """
-    pos_enu_m : (Ntime, 3)
-        observer -> satellite vector in ENU frame [m]
-    time_sec : (Ntime,)
-        time array [s]
-
-    Returns
-    -------
-    s_hat : (Ntime, 3)
-        line-of-sight unit vector
-    ds_hat_dt : (Ntime, 3)
-        time derivative of LOS unit vector [1/s]
-    """
-    s_hat = normalize_rows(pos_enu_m)
-
-    ds_hat_dt = np.zeros_like(s_hat)
-    for k in range(3):
-        ds_hat_dt[:, k] = np.gradient(s_hat[:, k], time_sec)
-
-    return s_hat, ds_hat_dt
-
-def compute_fringe_rate_from_los(baseline_enu_m, ds_hat_dt, freqs_hz):
-    """
-    baseline_enu_m : (3,)
-    ds_hat_dt : (Ntime, 3)
-    freqs_hz : (Nfreq,)
-
-    Returns
-    -------
-    fringe_rate_hz : (Ntime, Nfreq)
-    """
-    baseline_enu_m = np.asarray(baseline_enu_m, dtype=float)
-    proj = ds_hat_dt @ baseline_enu_m   # (Ntime,)
-
-    # f_fringe = - nu/c * b·ds_hat/dt
-    fringe_rate_hz = -(proj[:, None] * freqs_hz[None, :]) / C
-    return fringe_rate_hz
-
-def compute_time_sinc_from_los(baseline_enu_m, pos_enu_m, time_sec, freqs_hz, dt_int_sec):
-    """
-    Full time-smearing attenuation from LOS evolution.
-    """
-    _, ds_hat_dt = compute_unit_los_and_derivative(pos_enu_m, time_sec)
-    fringe_rate_hz = compute_fringe_rate_from_los(baseline_enu_m, ds_hat_dt, freqs_hz)
-    sinc_time = np.sinc(fringe_rate_hz * dt_int_sec)
-    return fringe_rate_hz, sinc_time
-
-# %%
-# quick shape sanity check for LOS-based time sinc
-Ntime = 8
-Nfreq = 5
-
-time_sec = np.linspace(0.0, 7.0, Ntime)
-pos_enu_m = np.stack([
-    1000.0 + 3.0 * time_sec,
-    2000.0 - 2.0 * time_sec,
-    500.0 + 1.5 * time_sec,
-], axis=1)
-
-baseline_enu_m = np.array([14.6, 0.0, 0.0])
-freqs_hz = np.linspace(100e6, 120e6, Nfreq)
-dt_int_sec = 10.0
-
-fringe_rate_hz, sinc_time = compute_time_sinc_from_los(
-    baseline_enu_m=baseline_enu_m,
-    pos_enu_m=pos_enu_m,
-    time_sec=time_sec,
-    freqs_hz=freqs_hz,
-    dt_int_sec=dt_int_sec,
-)
-
-print("fringe_rate_hz shape:", fringe_rate_hz.shape)
-print("sinc_time shape:", sinc_time.shape)
-print("sinc min/max:", float(sinc_time.min()), float(sinc_time.max()))
-
-# %%
-# Combine frequency-smearing and time-smearing into attenuation_full
-# Goal: make attenuation_full shape compatible with geometry_only_summary()['attenuation']
-
-import sys
-from pathlib import Path
-import numpy as np
-import pandas as pd
-
-sys.path.append(str(Path("../src").resolve()))
-from starlink_uemr.geometry.washing import geometry_only_summary
-
-# Prefer real track data if available: track_df_pass -> track_df(non-empty) -> track_all -> synthetic
-if all(k in globals() for k in ["track_df_pass", "baseline_enu_m", "freqs_hz", "dt_sec"]) and len(track_df_pass) >= 2:
-    track_df_use = track_df_pass.copy()
-    baseline_use = np.asarray(baseline_enu_m, dtype=float)
-    freqs_use = np.asarray(freqs_hz, dtype=float)
-    dt_use = float(dt_sec)
-    print("[info] using real track_df_pass")
-elif all(k in globals() for k in ["track_df", "baseline_enu_m", "freqs_hz", "dt_sec"]) and len(track_df) >= 2:
-    track_df_use = track_df.copy()
-    baseline_use = np.asarray(baseline_enu_m, dtype=float)
-    freqs_use = np.asarray(freqs_hz, dtype=float)
-    dt_use = float(dt_sec)
-    print("[info] using real track_df")
-elif all(k in globals() for k in ["track_all", "baseline_enu_m", "freqs_hz", "dt_sec"]) and len(track_all) >= 2:
-    track_df_use = track_all.copy()
-    baseline_use = np.asarray(baseline_enu_m, dtype=float)
-    freqs_use = np.asarray(freqs_hz, dtype=float)
-    dt_use = float(dt_sec)
-    print("[info] using real track_all (track_df empty or unavailable)")
-else:
-    missing = [k for k in ["track_df_pass", "track_df", "track_all", "baseline_enu_m", "freqs_hz", "dt_sec"] if k not in globals()]
-    print("[info] missing vars:", missing)
-    print("[info] using synthetic fallback track for shape validation")
-
-    n_time = 8
-    n_freq = 5
-    time_sec_syn = np.linspace(0.0, 7.0, n_time)
-    pos_enu_syn = np.stack([
-        1000.0 + 3.0 * time_sec_syn,
-        2000.0 - 2.0 * time_sec_syn,
-        500.0 + 1.5 * time_sec_syn,
-    ], axis=1)
-
-    rng_m = np.linalg.norm(pos_enu_syn, axis=1)
-    uvec = pos_enu_syn / np.clip(rng_m[:, None], 1e-12, None)
-    jd0 = 2460000.0
-    jd = jd0 + time_sec_syn / 86400.0
-
-    track_df_use = pd.DataFrame({
-        "ux": uvec[:, 0],
-        "uy": uvec[:, 1],
-        "uz": uvec[:, 2],
-        "range_km": rng_m / 1e3,
-        "jd": jd,
-        "alt_deg": np.linspace(10.0, 60.0, n_time),
-        "az_deg": np.linspace(0.0, 180.0, n_time),
-    })
-    baseline_use = np.array([14.6, 0.0, 0.0])
-    freqs_use = np.linspace(100e6, 120e6, n_freq)
-    dt_use = 10.0
-
-# 1) Reference summary with the same baseline/freq/time grid
-summary_ref = geometry_only_summary(
-    track_df=track_df_use,
-    baseline_enu_m=baseline_use,
-    freqs_hz=freqs_use,
-    dt_sec=dt_use,
-)
-
-# 2) Build LOS position vector in ENU [m]
-pos_enu_m = np.column_stack([
-    track_df_use["ux"].to_numpy() * track_df_use["range_km"].to_numpy() * 1e3,
-    track_df_use["uy"].to_numpy() * track_df_use["range_km"].to_numpy() * 1e3,
-    track_df_use["uz"].to_numpy() * track_df_use["range_km"].to_numpy() * 1e3,
-])
-
-time_sec = (track_df_use["jd"].to_numpy() - track_df_use["jd"].to_numpy()[0]) * 86400.0
-
-# 3) Time-smearing sinc: (Ntime, Nfreq)
-fringe_rate_hz, sinc_time = compute_time_sinc_from_los(
-    baseline_enu_m=baseline_use,
-    pos_enu_m=pos_enu_m,
-    time_sec=time_sec,
-    freqs_hz=freqs_use,
-    dt_int_sec=dt_use,
-)
-
-# 4) Frequency-smearing sinc from per-time delay and channel width
-channel_width_hz = float(np.median(np.diff(freqs_use))) if len(freqs_use) > 1 else 0.0
-tau_s = summary_ref["tau_s"]
-sinc_freq = np.sinc(tau_s[:, None] * channel_width_hz)
-
-# 5) Full attenuation = freq-smearing * time-smearing (element-wise)
-attenuation_full = sinc_freq * sinc_time
-
-print("summary attenuation shape:", summary_ref["attenuation"].shape)
-print("sinc_time shape:", sinc_time.shape)
-print("sinc_freq shape:", sinc_freq.shape)
-print("attenuation_full shape:", attenuation_full.shape)
-
-if attenuation_full.shape == summary_ref["attenuation"].shape:
-    print("[ok] attenuation_full shape matches geometry_only_summary attenuation")
-else:
-    print("[warn] shape mismatch")
-
-# %%
-print("peak_jd:", peak_jd)
-print("track_all_pass alt max 시점 jd:", 
-      track_all_pass.loc[track_all_pass["alt_deg"].idxmax(), "jd"])
-print("alt max:", track_all_pass["alt_deg"].max())
-
-# %%
-print("alt range:", track_df_pass["alt_deg"].min(), 
-      "~", track_df_pass["alt_deg"].max())
-print("시간 범위(분):", 
-      (track_df_pass["jd"].max() - track_df_pass["jd"].min()) * 1440)
-
-# %%
-import inspect
-from starlink_uemr.geometry import washing as w
-
-print(inspect.getsource(w.delay_series_seconds))
-print(inspect.getsource(w.delay_rate_series_seconds_per_second))
-print(inspect.getsource(w.fringe_washing_attenuation))
