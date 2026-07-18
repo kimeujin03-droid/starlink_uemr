@@ -1,0 +1,8 @@
+metric,value
+n_refined_cases,1
+n_refined_PTE_lt_001,0
+n_refined_physical_floor_1e3,0
+n_refined_physical_floor_1e2,0
+n_refined_beam_robust,0
+n_full_polybeam_strict,0
+n_frozen_only_strict,0

@@ -1,0 +1,16 @@
+metric,value
+selection_mode,absint
+n_seed_cases_before_pair_expansion,7
+n_refined_cases,10
+n_refined_PTE_lt_001,0
+n_refined_physical_floor_1e3,0
+n_refined_physical_floor_1e2,0
+n_refined_beam_robust,0
+n_full_polybeam_strict,0
+n_frozen_only_strict,0
+n_refined_absint_lt_001,0
+n_refined_absint_floor_1e3,0
+n_refined_absint_floor_1e2,0
+n_refined_absint_beam_robust,0
+n_full_polybeam_absint_strict,0
+n_frozen_only_absint_strict,0

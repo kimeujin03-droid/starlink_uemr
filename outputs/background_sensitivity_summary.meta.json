@@ -1,0 +1,5 @@
+{
+  "scope": "Post-hoc summary of existing 648-row coverage grid; no new injections.",
+  "grouping": "baseline_id, baseline_class, lst_stratum, lst_bin_id",
+  "physical_floor": "relative_abs_bias > 1e-2 combined with candidate_statistical"
+}

@@ -1,0 +1,925 @@
+\documentclass[final,5p,times]{elsarticle}
+
+% =============================================================================
+% AUTHOR CHECKLIST BEFORE SUBMISSION
+% 1. Add the exact public HERA H6C DOI/file identifiers for every UVH5 input.
+% 2. Add the TLE provider, acquisition timestamp, source identifier, and the
+%    filtering/de-duplication rule that produced the 6364-record catalog.
+% 3. [DONE 2026-07-18] Integrated-tail beam-robust set confirmed
+%    (22 rows / 11 pairs at B_rel>1e-3; 9 pairs at >1e-2) and the full-set
+%    calibration-residual audit completed: all 176 (pair, condition) cells
+%    beam-robust retained. Reflected in Secs. 3.2, 4.6, 5, 6 and abstract.
+% 4. The four-flux multiplicity bootstrap was not regenerated and is therefore
+%    intentionally omitted from this manuscript.
+% 5. Confirm every citation key in starlink_uemr_refs_complete.bib.
+% 6. Verify the Z_PS,max definition in Sec. 2.4 (median/MAD robust z) matches
+%    the exact formula in the analysis scripts before submission.
+% 7. Verify whether the LOCAL-tail beam-robust count (10) is rows or unique
+%    pairs; the integrated-tail count (22) is rows (= 11 unique pairs).
+%    Text currently labels both as rows.
+% 8. Mint an archival DOI (e.g. Zenodo) for the code/summary-product release
+%    and add it to the Data and Code Availability section.
+% 9. Generate figure R5 (residual-audit margins) from
+%    outputs/beam_robust_residual_audit_fourflux.csv; spec in the caption.
+% =============================================================================
+
+\usepackage{kotex}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage{stfloats}
+\usepackage{makecell}
+
+\graphicspath{{./}{./figures/}{./fourflux_figures/}{./fourflux_tail_profile_figures_local/}{./fourflux_tail_profile_figures_absint/}}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\setlist{nosep,leftmargin=1.5em}
+\captionsetup{font=small,labelfont=bf}
+\journal{Astronomy and Computing}
+\sisetup{detect-all}
+\emergencystretch=3em
+\sloppy
+\raggedbottom
+
+\newcommand{\maybeincludegraphics}[2][]{%
+  \IfFileExists{#2}{\includegraphics[#1]{#2}}{%
+  \fbox{\begin{minipage}{0.84\linewidth}\centering
+  Figure file not found: {\ttfamily\detokenize{#2}}
+  \end{minipage}}}%
+}
+
+% -----------------------------------------------------------------------------
+% Frozen result macros: four-flux/full-catalog run dated 2026-07-14
+% -----------------------------------------------------------------------------
+\newcommand{\NTLERecords}{6364}
+\newcommand{\NCells}{27}
+\newcommand{\NMainRows}{1296}
+\newcommand{\NBeamPairs}{648}
+\newcommand{\NNullMain}{100}
+\newcommand{\NNullTail}{1000}
+
+% Main-grid counts (N_null=100)
+\newcommand{\NMainLocalStrict}{30}
+\newcommand{\NMainIntStrict}{74}
+\newcommand{\NMainLocalPhysEthree}{11}
+\newcommand{\NMainIntPhysEthree}{57}
+\newcommand{\NMainLocalPhysEtwo}{7}
+\newcommand{\NMainIntPhysEtwo}{35}
+\newcommand{\NMainLocalPhysEone}{1}
+\newcommand{\NMainIntPhysEone}{13}
+\newcommand{\NMainBeamRobustLocalEthree}{4}
+\newcommand{\NMainBeamRobustIntEthree}{10}
+\newcommand{\NMainFrozenOnlyLocalEthree}{1}
+\newcommand{\NMainFullOnlyLocalEthree}{2}
+\newcommand{\NMainFrozenOnlyIntEthree}{27}
+\newcommand{\NMainFullOnlyIntEthree}{10}
+\newcommand{\NMainExpectedFP}{13}
+
+% Type-II ANOVA for log10(B_rel); eta^2 rounded for presentation
+\newcommand{\AnovaRtwo}{0.7571}
+\newcommand{\AnovaAdjRtwo}{0.7547}
+\newcommand{\AnovaFluxEta}{0.6954}
+\newcommand{\AnovaLSTEta}{0.3088}
+\newcommand{\AnovaMultEta}{0.2176}
+\newcommand{\AnovaBaseEta}{0.0930}
+\newcommand{\AnovaBeamEta}{0.0058}
+\newcommand{\AnovaMorphEta}{0.0016}
+\newcommand{\AnovaInterEta}{0.0001}
+\newcommand{\AnovaFluxSlope}{1.042}
+\newcommand{\AnovaDropped}{48}
+
+% N_null=1000 adaptive tail refinement
+\newcommand{\NLocalTailRows}{90}
+\newcommand{\NLocalTailStrict}{21}
+\newcommand{\NLocalTailPhysEthree}{17}
+\newcommand{\NLocalTailPhysEtwo}{9}
+\newcommand{\NLocalTailBeamRobustEthree}{10}
+\newcommand{\NIntTailRows}{184}
+\newcommand{\NIntTailStrict}{62}
+\newcommand{\NIntTailPhysEthree}{61}
+\newcommand{\NIntTailPhysEtwo}{40}
+\newcommand{\NIntTailBeamRobustEthree}{22}
+
+% Synthetic ZA sweep
+\newcommand{\NZAAll}{210}
+\newcommand{\NZAPerBeam}{105}
+\newcommand{\NZAFullLocalPhys}{0}
+\newcommand{\NZAFullIntPhys}{0}
+\newcommand{\NZANoBeamLocalPhys}{2}
+\newcommand{\NZANoBeamIntPhys}{0}
+\newcommand{\NZAFullBiasEtwo}{24}
+\newcommand{\NZANoBeamBiasEtwo}{103}
+
+% Candidate-level local-branch audit and calibration residual audit
+\newcommand{\NCandidateAudit}{7}
+\newcommand{\NCandidateLocalRetained}{6}
+\newcommand{\NCandidateLocalDropped}{1}
+\newcommand{\NCandidateBeamSensitive}{0}
+\newcommand{\NCandidateBeamRobustContam}{0}
+\newcommand{\NCandidateDroppedPTE}{0.01199}
+
+% -----------------------------------------------------------------------------
+% Frozen result macros: integrated-tail beam-robust residual audit, 2026-07-18
+% Source: outputs/beam_robust_residual_audit_fourflux.csv (+ summary)
+% -----------------------------------------------------------------------------
+\newcommand{\NIntAuditRowsSel}{22}
+\newcommand{\NIntAuditPairs}{11}
+\newcommand{\NIntAuditPairsEtwo}{9}
+\newcommand{\NIntAuditPairsMid}{2}
+\newcommand{\NIntAuditConds}{16}
+\newcommand{\NIntAuditCells}{176}
+\newcommand{\NIntAuditEvals}{352}
+\newcommand{\IntAuditMaxPTE}{0.0070}
+\newcommand{\IntAuditMinBrel}{1.9\times10^{-3}}
+\newcommand{\IntAuditMinBrelEtwo}{0.017}
+\newcommand{\NIntAuditPairsTypical}{3}
+\newcommand{\NIntAuditPairsStress}{8}
+
+\begin{document}
+\begin{frontmatter}
+
+\title{Starlink 유사 UEMR 스트레스 주입을 위한 21-cm 지연 스펙트럼 QA:\\
+국소 초과, 적분 편향 및 빔-연산자 강건성의 병렬 판정}
+
+\author[jnu]{Yujin Kim\fnref{orcid1}}
+\ead{europa5218@stu.jejunu.ac.kr}
+\author[jnu]{Ji-Won Kang\corref{cor1}}
+\ead{jwkang@jejunu.ac.kr}
+\affiliation[jnu]{organization={Jeju National University},
+                  country={Republic of Korea}}
+\cortext[cor1]{Corresponding author}
+\fntext[orcid1]{ORCID: \href{https://orcid.org/0009-0006-9745-2960}{0009-0006-9745-2960}}
+
+\begin{abstract}
+저궤도 위성 군집의 의도치 않은 전자기 방사(unintended
+electromagnetic radiation; UEMR)는 저주파 21-cm 관측의 잠재적
+간섭원이지만, 원자료 수준의 존재와 재이온화 시대(EoR) 지연
+윈도우의 물리적으로 유의한 오염은 동일한 명제가 아니다. 본 연구는
+Starlink 유사 UEMR 순방향 주입에 대해 국소 최댓값과 윈도우 적분
+통계량을 독립적인 진단 분기로 평가하고, 경험적 PTE, 상대 절대편향
+$B_{\rm rel}$, 짝지은 빔 연산자 및 보정 잔차를 결합한 계산적 QA
+판정 계층을 제안한다.
+
+2022년 10월 8일 HERA H6C 파생 가시성의 시간--주파수 구조를
+2026년 1월 1일 UTC 위성 기하 창으로 재매핑하고, 전체
+\NTLERecords{}개 TLE 기록을 사용하였다. 9개 기선과 세 LST 층으로
+구성한 \NCells{}개 셀에서 frozen/full-chromatic HERA H2C CST
+PolyBeam, 세 스펙트럼 형태, 단일/다중 위성 및
+$S_{\rm ref}=\{10,30,300,1000\}$ Jy를 교차하여 \NMainRows{}개
+시행을 계산하였다. 거친 $N_{\rm null}=\NNullMain$ 그리드에서는
+엄격한 국소 행 \NMainLocalStrict{}건과 적분 행 \NMainIntStrict{}건이
+나타났으나, $B_{\rm rel}>10^{-3}$을 함께 요구하면 각각
+\NMainLocalPhysEthree{}건과 \NMainIntPhysEthree{}건으로 줄었다.
+Type-II 분산 분해에서 $\log_{10}B_{\rm rel}$은 플럭스
+($\eta_p^2=\AnovaFluxEta$), LST 층($\AnovaLSTEta$), 위성 다중성
+($\AnovaMultEta$) 및 기선 길이($\AnovaBaseEta$)가 지배했으며,
+형태학과 빔의 효과크기는 작았다.
+
+$N_{\rm null}=\NNullTail$ 적응 꼬리 정밀화에서는
+$B_{\rm rel}>10^{-3}$ 기준으로 빔-강건 국소 QA 행
+\NLocalTailBeamRobustEthree{}건과 빔-강건 적분 QA 행
+\NIntTailBeamRobustEthree{}건(짝지은 고유 쌍 \NIntAuditPairs{}개)이
+확인되었다. 이 \NIntAuditPairs{}쌍 전체에 대해 짝지은 양쪽 빔과
+백색·매끄러운 보정 잔차 \NIntAuditConds{}개 조건을 교차한 전수
+잔차 감사를 수행한 결과, \NIntAuditCells{}개 (쌍, 조건) 셀 전부에서
+빔-강건 적분 분류가 유지되었다(최대 $PTE_{\rm global,absint}$
+\IntAuditMaxPTE{}, 최소 $B_{\rm rel}=\IntAuditMinBrel$). 따라서
+이들은 본 QA 계층의 최종 단계인 오염 후보 승격 기준을 만족한다.
+이는 주입된 스트레스 신호에 대한 판정 계층의 종단 안정성 검증이며,
+실제 우주론적 오염의 검출이 아니다. 별도의 210-case 천정각
+스윕에서는 full PolyBeam 조건의 물리적 국소·적분 후보가 모두
+0건이었고, 거친 국소 후보 \NCandidateAudit{}건의 독립 잔차
+감사에서도 빔-강건 적분 오염 후보가 나타나지 않았다. 본 결과는
+통계적 희귀성, 절대 효과크기 및 분석 연산자 의존성을 분리해
+보고해야 함을 보여 주며, 실제 HERA--Starlink 동시 검출이나 발생률
+추정이 아닌 재현 가능한 pre-production QA 연구로 해석되어야 한다.
+\end{abstract}
+
+\begin{keyword}
+Starlink \sep unintended electromagnetic radiation \sep HERA \sep
+21-cm cosmology \sep delay spectrum \sep radio-frequency interference
+\sep empirical PTE \sep quality assurance \sep PolyBeam
+\end{keyword}
+
+\end{frontmatter}
+
+% =============================================================================
+\section{서론}
+\label{sec:intro}
+
+적색편이 21-cm 신호는 초기 우주의 중성수소 분포와 첫 천체 형성을
+추적하는 직접적 탐침이지만, 전경, 열잡음, 보정 잔차 및 RFI보다
+훨씬 희미하다
+\citep{furlanetto2006,pritchard2012,morales2010,deboer2017,
+abdurashidova2022}. 지연 스펙트럼 분석에서는 주파수에 대해
+매끄러운 전경이 주로 지평선 지연 안쪽의 웻지에 집중되고, 지평선
+버퍼 바깥의 모드를 EoR 윈도우로 사용한다
+\citep{parsons2012delay,pober2013,liu2014wedge,thyagarajan2015}.
+따라서 시간--주파수 평면에서 약한 구조라도 처리 연산자를 거쳐
+고지연 모드로 재조직되면 과학 산출물의 QA 문제가 될 수 있다.
+
+저궤도 위성 군집은 이 문제를 구체화한다. LOFAR와 EDA2 관측은
+Starlink 위성의 저주파 의도적·비의도적 방출을 검출했고, 후속
+관측에서는 광대역 및 빗살(comb-like) 구조가 보고되었다
+\citep{divruno2023,grigg2023,bassa2024}. 그러나 UEMR의 존재,
+특정 지연 빈의 초과, 윈도우 전체의 적분 편향, 그리고 그 판정의
+빔·보정 조건에 대한 강건성은 구분되어야 한다.
+
+이 구분은 제거 알고리즘의 성능만으로 해결되지 않는다.
+\citet{kim2026nonidentifiability}은 단일 epoch에서 과학 신호와
+구조화된 RFI가 중첩된 특이벡터 부분공간을 점유하면 저랭크 분해의
+rank 선택만으로 잔류 RFI 억제와 신호 보존을 동시에 인증할 수
+없음을 보였다. 본 연구는 이 운영적 비식별성의 문제를 처리 후 QA로
+확장한다. 중심 질문은 ``RFI가 존재하는가''가 아니라, ``관측된
+통계적 초과를 어느 단계까지 후속 검토가 필요한 물리적 QA 후보로
+승격할 수 있는가''이다.
+
+국소 최댓값과 윈도우 적분량은 서로 다른 신호 조직화에 반응한다.
+좁은 결맞음 스파이크는 국소 통계량만 증가시킬 수 있고, 여러 지연
+모드에 분산된 약한 구조는 어느 한 빈에서도 극단적이지 않으면서
+적분량을 증가시킬 수 있다. 따라서 본 연구는 두 통계량을 병렬
+분기로 계산하고, 통계적 희귀성, 절대 효과크기, 빔 연산자 교체 및
+보정 잔차에 대한 안정성을 별도 축으로 평가한다.
+
+본 연구는 실제 HERA--Starlink 동시 관측, 결정론적 UEMR 감산,
+보정된 우주론적 밴드파워 또는 오염 발생률을 주장하지 않는다.
+TLE는 개별 위성의 실제 방출 파형을 복원하는 템플릿이 아니라,
+물리적으로 가능한 이동 방출원의 방향, 거리 및 지연 궤적을 생성하는
+스트레스 입력이다. 본 연구의 기여는 (i) 국소·적분 반응의 병렬
+판정, (ii) 문헌 규모에서 상한 스트레스까지 연결하는 4단계 플럭스
+축, (iii) HERA H2C CST PolyBeam의 주파수 색수차를 포함한 짝지은
+빔 감사, (iv) 빔-강건 적분 후보 전수에 대한 보정 잔차 감사,
+(v) 현재 QA 연산자로 재실행한 천정각 감도 분석이다.
+
+% =============================================================================
+\section{자료, 순방향 주입 및 QA 지표}
+\label{sec:methods}
+
+\subsection{HERA 배경과 시간 재매핑}
+\label{sec:background}
+
+분석 배경은 HERA H6C 공개 가시성 산출물에서 추출한 9개 동서 방향
+유사 기선의 10분 크롭이다. 원자료의 관측일은 2022년 10월 8일이며,
+시간--주파수 구조, 플래그 및 \texttt{nsamples} 가중치는 그대로
+유지한다. 위성 기하 계산에서는 각 크롭의 내부 표본 간격을 유지한
+채 시간축만 2026년 1월 1일 UTC의 대응 창으로 재매핑하였다. 따라서
+본문의 2026년 1월 1일은 TLE 평가 기준일이며 HERA 가시성의 실제
+관측일이 아니다.
+
+플래그된 표본은 가중치 0으로 두고, 비플래그 표본은
+\texttt{nsamples}에 비례한 뒤 크롭별 최대값으로 정규화한다. 비유한
+복소 가시성은 0으로 대체하고 해당 가중치도 0으로 둔다. 이 재매핑은
+실제 HERA 관측과 Starlink 통과 사이의 동시대 위상 정합을 재현하지
+않는다. 따라서 이후 경험적 PTE는 UEMR 부재 영가설의 검정값이 아니라,
+고정된 배경 실현 아래에서 특정 위상 결맞음 구조가 QA 통계량을 얼마나
+움직였는지를 나타내는 조건부 민감도 지표이다.
+
+9개 기선은 14.6--207.3 m 범위를 포괄한다. 각 기선에서 주입 전
+메타데이터만 사용해 정온(quiet), 전형(typical), 스트레스(stress)
+LST 층을 하나씩 선택하여 총 \NCells{}개 기선--LST 셀을 구성한다.
+층 선택에는 주입 후 $Z_{\rm PS,max}$, PTE 또는 $B_{\rm rel}$을
+사용하지 않는다.
+
+\subsection{TLE 기반 순방향 주입과 빔 모델}
+\label{sec:injection}
+
+전체 \NTLERecords{}개 TLE 기록을 공통 입력으로 사용하고, 각 10분
+창에서 고도 기준을 통과한 위성만 선택한다. 단일 위성 조건은 가장
+높은 통과 위성 1개를, 다중 위성 조건은 최대 12개를 사용한다. TLE는
+결정론적 감산 모델이 아니라 시간 종속 방향·거리·지연·프린지 레이트
+궤적을 생성하는 입력이다. 안테나 쌍 $(i,j)$의 근거리 지연은
+\begin{equation}
+ \tau_{ij}(t)=
+ \frac{|\mathbf r_{\rm sat}(t)-\mathbf r_j|-|\mathbf r_{\rm sat}(t)-\mathbf r_i|}{c}
+\end{equation}
+로 계산한다. 위성 성분의 겉보기 진폭은
+\begin{equation}
+ A(t,\nu)=S_{\rm ref}M_{\rm spec}(\nu)B(t,\nu)R(t)A_{\rm smear}(t,\nu)
+\end{equation}
+이며, 주입 가시성은
+\begin{equation}
+ V_{\rm sat}(t,\nu)=A(t,\nu)\exp[-2\pi i\nu\tau_{\rm sat}(t)]
+\end{equation}
+이다. 다중 위성 기본 주입은 각 성분을 동일한 위상 기준에서 합한
+coherent-default 상한 스트레스 구성으로 둔다. 이는 실제 서로 다른
+위성 방출원의 위상 동기를 예측한다는 뜻이 아니다.
+
+빔 응답 $B(t,\nu)$에는 \texttt{hera\_sim} v4.3의 HERA H2C CST
+기반 PolyBeam을 사용한다
+\citep{fagnoni2021,wilensky2024beam}. 주파수별 CST 적합 패턴을
+평가하는 full-chromatic PolyBeam을 주 물리 모형으로 두고, 동일한
+150 MHz 패턴을 전 대역에 고정한 frozen PolyBeam을 짝지은 연산자
+대조군으로 사용한다. CST 기반 PolyBeam은 단순 Airy disk 또는
+Gaussian 빔과 달리 전자기적 색수차와 비-Bessel형 null 구조를
+부분적으로 반영하므로, 지연 변환 뒤 기본 위성 지연 주변의 파워를
+재분배하고 해석적 빔에서 약한 고지연 응답을 만들 수 있다. 다만 이
+모형은 mutual coupling, cross-polarization leakage, cable-reflection
+residual 및 배열 수준의 모든 계통효과를 완전하게 포함하지 않는다
+\citep{barry2016,ewallwice2017,dillon2020redcal,kim2023beamvar}.
+
+\subsection{플럭스 계층과 스펙트럼 형태}
+\label{sec:flux}
+
+$S_{\rm ref}$는 특정 Starlink 통과의 HERA-apparent flux를 보정한
+예측값이 아니라 문헌 기반 order-of-magnitude 스트레스 좌표이다.
+LOFAR 관측은 저주파 Starlink UEMR이 대략 Jy에서 수십 Jy 규모에
+걸쳐 나타날 수 있음을 보여 준다
+\citep{divruno2023,bassa2024}. 빔 결합, slant range, 편광,
+off-axis 이득 및 방출 방향성은 실제 겉보기 진폭을 크게 바꿀 수
+있으므로, 본 연구는 10 및 30 Jy를 문헌 규모의 low/high anchor,
+300 및 1000 Jy를 QA 연산자의 동적범위와 실패 경계를 탐색하기 위한
+의도적 상한 스트레스 계층으로 사용한다. 300--1000 Jy 조건은 발생률
+또는 실제 검출 플럭스에 대한 주장이 아니다.
+
+스펙트럼 형태는 (i) 매끄러운 광대역(smooth), (ii) 문헌 기반
+협대역 선형(lines), (iii) 문헌 기반 kHz-comb 뱅크로 구성한다.
+형태학의 영향은 국소 PTE와 적분 편향에서 별도로 평가한다.
+
+\subsection{지연 스펙트럼 통계량과 대응-영가설}
+\label{sec:metrics}
+
+각 10분 가시성 크롭은 짝수·홀수 적분 집합 $a,b$로 나누고,
+주파수 가중치 $w(t,\nu)$와 Blackman--Harris taper $h(\nu)$를
+적용한다.
+\begin{equation}
+ \widetilde V_{a,b}(\tau)=
+ \mathcal F_{\nu\rightarrow\tau}
+ \left[w_{a,b}(t,\nu)h(\nu)V_{a,b}(t,\nu)\right].
+\end{equation}
+별도의 spectral inpainting과 fringe-rate filtering은 적용하지 않는다.
+짝수·홀수 교차곱의 실수부를 시간 평균한 QA 파워 프록시는
+\begin{equation}
+ \widehat P_{\rm QA}(\tau)=
+ \left\langle\mathrm{Re}
+ [\widetilde V_a(\tau)\widetilde V_b^*(\tau)]\right\rangle_t,
+\end{equation}
+주입 전후 차이는
+\begin{equation}
+ \Delta\widehat P_{\rm QA}(\tau)=
+ \widehat P_{\rm QA}^{\rm inj}(\tau)-\widehat P_{\rm QA}^{\rm bg}(\tau)
+\end{equation}
+로 둔다.
+
+EoR 윈도우 프록시는
+\begin{equation}
+ \tau_{\rm win}=\tau_{\rm hor}+100~{\rm ns},\qquad
+ W_{\rm win}=\{\tau:|\tau|\ge\tau_{\rm win}\}
+\end{equation}
+로 정의한다
+\citep{parsons2012delay,pober2013,liu2014wedge}. 국소 분기와 적분
+분기의 시행 수준 통계량은 각각
+\begin{align}
+ T_{\rm max}&=\max_{\tau\in W_{\rm win}}
+              \Delta\widehat P_{\rm QA}(\tau),\\
+ T_{\rm absint}&=\sum_{\tau\in W_{\rm win}}
+              |\Delta\widehat P_{\rm QA}(\tau)|
+\end{align}
+이다. 상대 절대편향은
+\begin{equation}
+ B_{\rm rel}=\frac{T_{\rm absint}}
+ {\sum_{\tau\in W_{\rm win}}|\widehat P_{\rm QA}^{\rm bg}(\tau)|}
+\end{equation}
+로 정의한다. 이는 보정된 우주론적 밴드파워가 아니라 본 QA 연산자
+내의 무차원 효과크기이다.
+
+대응-영가설은 주입의 시간--주파수 지지 영역과 진폭 포락선을
+유지한 채 지정된 위상 결맞음만 무작위화한다. 시행 통계량 $T$의
+상측 경험적 PTE는
+\begin{equation}
+ PTE(T_{\rm obs})=
+ \frac{1+\#\{T_{\rm null}^{(r)}\ge T_{\rm obs}\}}{N_{\rm null}+1}
+\end{equation}
+로 계산한다. $PTE_{\rm global,max}$는 $T_{\rm max}$,
+$PTE_{\rm global,absint}$는 $T_{\rm absint}$에 대응한다. 여기서
+``global''은 한 시행의 지연 윈도우 내부 최댓값 또는 적분에 대한
+뜻이며, \NMainRows{}개 시행 전체의 가족 단위 보정을 뜻하지 않는다.
+
+보조 탐색 진단으로, 대응-영가설 앙상블에 대한 윈도우 최댓값의
+강건 z-점수
+\begin{equation}
+ Z_{\rm PS,max}=
+ \frac{T_{\rm max}-\mathrm{median}\!\left(T_{\rm null}^{(r)}\right)}
+      {1.4826\,\mathrm{MAD}\!\left(T_{\rm null}^{(r)}\right)}
+\end{equation}
+를 정의한다. $Z_{\rm PS,max}$는 꼬리 선택
+(Section~\ref{sec:design:tail})과 탐색적 시각화
+(Fig.~\ref{fig:z-pte})에만 사용하며, 판정 게이트로는 사용하지
+않는다.
+
+\subsection{병렬 분기와 후보 용어}
+\label{sec:hierarchy}
+
+Table~\ref{tab:hierarchy}와 같이 국소 분기와 적분 분기를 독립적으로
+평가한다. $B_{\rm rel}>10^{-3}$은 탐색적 효과크기 게이트,
+$B_{\rm rel}>10^{-2}$는 운영적 보고 게이트로 사용한다. 어느 값도
+실제 우주론적 오차 예산으로 보정된 보편 임계값은 아니다.
+
+본 논문에서 ``빔-강건''은 동일한 (기선, LST 층, 형태학, 플럭스,
+다중성) 조건에서 frozen과 full-chromatic PolyBeam이 각각
+독립적으로 해당 분기의 PTE 게이트와 $B_{\rm rel}$ 게이트를
+통과함을 뜻하며, 주 그리드·꼬리 정밀화·잔차 감사 전체에서 동일한
+정의를 사용한다. 표의 마지막 단계 ``오염 후보 승격''은 주입
+시행에 대한 QA 계층 내 등급이다. 실제 관측 파이프라인에서라면
+승격된 후보는 심층 감사를 요구하는 등급에 해당하지만, 본 연구의
+주입은 합성 스트레스이므로 승격은 오염의 검출이 아니라 판정 계층의
+종단(end-to-end) 안정성 검증으로 해석된다.
+
+\begin{table}[!t]
+\centering
+\small
+\caption{병렬 QA 판정 규칙. ``빔-강건''은 동일 물리 조건의 frozen 및
+full-chromatic PolyBeam 양쪽에서 해당 분기와 동일한
+$B_{\rm rel}$ 게이트가 유지됨을 뜻한다.}
+\label{tab:hierarchy}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+단계 & 규칙 및 해석 \\
+\midrule
+국소 분기 L & $PTE_{\rm global,max}<0.01$ \\
+적분 분기 I & $PTE_{\rm global,absint}<0.01$ \\
+효과크기 & $B_{\rm rel}>10^{-3}$ 또는 $10^{-2}$ \\
+빔-강건 국소 QA & L과 효과크기가 양쪽 PolyBeam에서 유지 \\
+빔-강건 적분 QA & I와 효과크기가 양쪽 PolyBeam에서 유지 \\
+오염 후보 승격 & 빔-강건 적분 QA가 후보 수준 잔차 감사에서도 유지 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =============================================================================
+\section{실험 설계}
+\label{sec:design}
+
+\subsection{전체 카탈로그 4-플럭스 커버리지 그리드}
+\label{sec:design:grid}
+
+전체 \NTLERecords{}개 TLE를 모든 시행에 공통 적용한다. 9개 기선
+$\times$ 세 LST 층으로 구성한 \NCells{}개 셀에 두 빔, 세 형태학,
+네 플럭스 및 두 위성 다중성 수준을 교차한다.
+\begin{equation}
+ 27\times2\times3\times4\times2=\NMainRows{}.
+\end{equation}
+각 행은 $N_{\rm null}=\NNullMain$로 계산하며, 동일한 셀·형태학·플럭스·
+다중성의 frozen/full PolyBeam을 짝지어 \NBeamPairs{}쌍을 구성한다.
+
+\subsection{적응 꼬리 정밀화와 후보 감사}
+\label{sec:design:tail}
+
+$N_{\rm null}=100$의 최소 PTE는 $1/101\simeq0.0099$이므로, 0.01
+임계값 부근의 순위는 Monte Carlo 해상도에 민감하다. 국소 꼬리는
+$PTE_{\rm global,max}\le0.03$ 또는 $Z_{\rm PS,max}>3$이면서
+$B_{\rm rel}>10^{-3}$인 행을, 적분 꼬리는
+$PTE_{\rm global,absint}\le0.03$이면서 $B_{\rm rel}>10^{-3}$인
+행을 선택한다. 선택 후 짝지은 빔을 추가하고 모든 행을
+$N_{\rm null}=\NNullTail$로 재평가한다.
+
+국소 분기의 후보 수준 감사는 거친 그리드에서
+$PTE_{\rm global,max}<0.01$ 및 $B_{\rm rel}>10^{-2}$를 만족한
+국소-물리 후보 \NCandidateAudit{}건을 대상으로 수행한다. 동일한
+물리 조건의 양쪽 빔을 $N_{\rm null}=1000$으로 재계산한 뒤,
+백색·매끄러운 가산 잔차 대용물을
+$\sigma_{\rm cal}\in\{0,10^{-4},10^{-3},10^{-2}\}$에서 적용한다.
+매끄러운 잔차의 주파수 상관 길이는 0.5, 1.0, 5.0 MHz이다.
+
+적분 분기에 대해서는 별도의 전수 감사를 수행한다. 꼬리 정밀화에서
+탐색적 $10^{-3}$ 게이트를 통과한 빔-강건 적분 행
+\NIntTailBeamRobustEthree{}건, 즉 짝지은 고유 쌍
+\NIntAuditPairs{}개 전체를 대상으로, 국소 감사와 동일한 잔차
+설계---짝지은 frozen/full PolyBeam, 조건별
+$N_{\rm null}=\NNullTail$, 위와 동일한 $\sigma_{\rm cal}$ 및 잔차
+모형(백색 4조건, 매끄러운 $\sigma_{\rm cal}\times\ell_\nu$
+12조건)---를 적용한다. 각 (쌍, 잔차 조건)에서 양쪽 빔이 교란된
+배경 하에서도 독립적으로 $PTE_{\rm global,absint}<0.01$과
+$B_{\rm rel}>10^{-3}$을 유지하면 빔-강건 유지로, 한쪽 빔만
+유지하면 단일 빔 유지로, 그 외에는 탈락으로 분류한다. 전체 행렬은
+\NIntAuditPairs{}쌍 $\times$ \NIntAuditConds{}조건 $\times$ 2빔
+$=$ \NIntAuditEvals{}회의 $N_{\rm null}=\NNullTail$ 평가로
+구성되며, 잔차 실현은 국소 감사와 동일한 단일 seed를 사용한다.
+$\sigma_{\rm cal}=0$ 행은 원 꼬리 정밀화 산출물과 수치적으로
+일치함을 교차 검증하였다.
+
+\subsection{합성 천정각 감도 분석}
+\label{sec:design:za}
+
+이질적인 실제 TLE 앙상블과 분리하여 기하학적 감도를 평가하기 위해
+고도 550 km, 통과 방위각 $90^\circ$인 합성 궤도를 사용한다.
+최고 천정각은
+\begin{equation}
+ z_{\rm peak}\in\{5^\circ,15^\circ,30^\circ,45^\circ,
+ 60^\circ,70^\circ,78^\circ\}
+\end{equation}
+로 변화시킨다. 5개 배경, 세 동서 방향 기선(14.6, 140.4, 207.3 m),
+일곱 천정각 및 두 빔 조건을 교차하여 총 \NZAAll{}개 사례를
+구성한다. full-chromatic PolyBeam은 물리 빔 조건이고,
+$B\equiv1$은 빔 감쇠를 제거한 geometry-only 진단 비교군이다.
+$S_{\rm ref}=300$ Jy와 smooth 형태를 고정하여 각도 효과를 분리한다.
+
+% =============================================================================
+\section{결과}
+\label{sec:results}
+
+\subsection{4-플럭스 주 그리드}
+\label{sec:results:grid}
+
+거친 \NMainRows{}행 그리드에서 엄격한 국소 행은
+\NMainLocalStrict{}건, 엄격한 적분 행은 \NMainIntStrict{}건이었다.
+그러나 $B_{\rm rel}>10^{-3}$을 함께 요구하면 각각
+\NMainLocalPhysEthree{}건과 \NMainIntPhysEthree{}건으로 줄었다.
+운영적 $10^{-2}$ 게이트에서는 국소 \NMainLocalPhysEtwo{}건,
+적분 \NMainIntPhysEtwo{}건이 남았다. 짝지은 빔 기준
+$10^{-3}$ 게이트에서 빔-강건 국소 쌍은
+\NMainBeamRobustLocalEthree{}개, 적분 쌍은
+\NMainBeamRobustIntEthree{}개였다. 참고로 시행별 PTE가 균등하게
+분포한다면 \NMainRows{}행에서 $PTE<0.01$ 행의 기대 수는 약
+\NMainExpectedFP{}건이다. 관측된 \NMainLocalStrict{}건과
+\NMainIntStrict{}건은 이를 상회하지만, 본 PTE는
+Section~\ref{sec:background}에서 정의한 조건부 민감도 지표이므로
+이 비교는 규모 감각을 위한 참고값이다.
+
+\begin{table*}[!t]
+\centering
+\small
+\caption{플럭스별 거친 주 그리드 결과($N_{\rm null}=100$). 물리 행은
+해당 분기 PTE와 $B_{\rm rel}$ 게이트를 동시에 만족한다.}
+\label{tab:flux_counts}
+\begin{tabular}{rrrrrrrr}
+\toprule
+$S_{\rm ref}$ (Jy) & 행 & L 엄격 & I 엄격 &
+L+$10^{-3}$ & I+$10^{-3}$ & L+$10^{-2}$ & I+$10^{-2}$ \\
+\midrule
+10   & 324 & 9 & 18 & 0 & 6  & 0 & 0 \\
+30   & 324 & 8 & 17 & 2 & 12 & 0 & 2 \\
+300  & 324 & 6 & 16 & 4 & 16 & 2 & 10 \\
+1000 & 324 & 7 & 23 & 5 & 23 & 5 & 23 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+플럭스 증가에 따라 엄격 PTE 행 수가 단조롭게 증가하지는 않았지만,
+절대편향 게이트를 포함한 물리 행은 고플럭스 계층에 집중되었다.
+이는 대응-영가설도 주입 진폭과 함께 변하기 때문에 PTE와 효과크기가
+동일한 역할을 하지 않음을 보여 준다. 형태학별
+$B_{\rm rel}>10^{-3}$ 물리 행은 smooth에서 국소/적분 3/16,
+lines에서 2/23, kHz-comb에서 6/18이었다.
+
+\begin{figure}[!t]
+\centering
+\maybeincludegraphics[width=\linewidth]{R2_z_vs_pte_global.png}
+\caption{4-플럭스 그리드의 국소 강건 z와
+$PTE_{\rm global,max}$. 큰 z는 낮은 경험적 PTE 또는 큰
+$B_{\rm rel}$과 일대일 대응하지 않으므로 탐색적 진단으로만 사용한다.}
+\label{fig:z-pte}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\maybeincludegraphics[width=\linewidth]{R3_bias_floor_sensitivity.png}
+\caption{효과크기 게이트에 따른 국소·적분 물리 행 수. $B_{\rm rel}$
+임계값은 QA 보고 규칙이며 물리적으로 보정된 우주론적 허용치가 아니다.}
+\label{fig:bias-floor}
+\end{figure}
+
+\subsection{적분 편향을 지배하는 요인}
+\label{sec:results:anova}
+
+양의 $B_{\rm rel}$을 갖는 행에 대해 $\log_{10}B_{\rm rel}$의 Type-II
+분산 분해를 수행하였다. \AnovaDropped{}개 행은 비양의 반응값으로
+로그 모형에서 제외되었다. 모형의 $R^2$와 조정 $R^2$는 각각
+\AnovaRtwo{}와 \AnovaAdjRtwo{}였다.
+
+\begin{table}[!t]
+\centering
+\small
+\caption{$\log_{10}B_{\rm rel}$ Type-II 분산 분해. $10^{-16}$
+미만의 $p$-값은 수치 정밀도 한계 아래이므로 절단 표기한다.}
+\label{tab:anova}
+\begin{tabular}{lrr}
+\toprule
+요인 & partial $\eta^2$ & $p$ \\
+\midrule
+플럭스 & \AnovaFluxEta & $<10^{-16}$ \\
+LST 층 & \AnovaLSTEta & $<10^{-16}$ \\
+위성 다중성 & \AnovaMultEta & $<10^{-16}$ \\
+기선 길이 & \AnovaBaseEta & $<10^{-16}$ \\
+빔 모델 & \AnovaBeamEta & 0.0075 \\
+형태학 & \AnovaMorphEta & 0.38 \\
+빔$\times$형태학 & \AnovaInterEta & 0.94 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+플럭스가 가장 큰 효과를 보였고, 기술적 log--log 기울기는 플럭스
+1 dex 증가당 $B_{\rm rel}$ \AnovaFluxSlope{} dex였다. LST 층,
+다중성 및 기선 길이도 큰 효과를 보인 반면, 빔과 형태학의 효과크기는
+작았다. 이는 빔이 중요하지 않다는 뜻이 아니다. 빔은 전체 편향의
+분산을 크게 설명하지 않더라도 개별 사례를 임계값 양쪽으로 이동시켜
+후보 등급을 바꿀 수 있으므로 짝지은 후보 감사가 필요하다.
+
+\subsection{$N_{\rm null}=1000$ 병렬 꼬리 정밀화}
+\label{sec:results:tail}
+
+국소 꼬리에서는 짝지은 확장 후 \NLocalTailRows{}개 행을 재평가해
+엄격 국소 \NLocalTailStrict{}건을 얻었다. 이 중
+$B_{\rm rel}>10^{-3}$은 \NLocalTailPhysEthree{}건,
+$10^{-2}$는 \NLocalTailPhysEtwo{}건이었고, 탐색적
+$10^{-3}$ 게이트의 빔-강건 국소 행은
+\NLocalTailBeamRobustEthree{}건이었다.
+
+적분 꼬리에서는 \NIntTailRows{}개 행을 재평가해 엄격 적분
+\NIntTailStrict{}건을 얻었다. $B_{\rm rel}>10^{-3}$은
+\NIntTailPhysEthree{}건, $10^{-2}$는 \NIntTailPhysEtwo{}건이었으며,
+선택에 사용한 $10^{-3}$ 게이트에서 빔-강건 적분 행은
+\NIntTailBeamRobustEthree{}건, 짝지은 고유 쌍으로는
+\NIntAuditPairs{}개였다.
+
+\begin{table}[!t]
+\centering
+\small
+\caption{적응 꼬리 정밀화 결과($N_{\rm null}=1000$). 빔-강건 수는
+선택에 사용한 $B_{\rm rel}>10^{-3}$ 게이트 기준의 행 수이며, 적분
+꼬리의 짝지은 고유 쌍 수는 \NIntAuditPairs{}개이다.}
+\label{tab:tail}
+\begin{tabular}{lrr}
+\toprule
+지표 & 국소 꼬리 & 적분 꼬리 \\
+\midrule
+재평가 행 & \NLocalTailRows & \NIntTailRows \\
+엄격 PTE & \NLocalTailStrict & \NIntTailStrict \\
+PTE+$B_{\rm rel}>10^{-3}$ & \NLocalTailPhysEthree & \NIntTailPhysEthree \\
+PTE+$B_{\rm rel}>10^{-2}$ & \NLocalTailPhysEtwo & \NIntTailPhysEtwo \\
+빔-강건($10^{-3}$, 행) & \NLocalTailBeamRobustEthree & \NIntTailBeamRobustEthree \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+이 결과는 이전 2-플럭스 분석의 ``빔-강건 적분 후보 0'' 결론을
+4-플럭스 결과에 그대로 적용할 수 없음을 보여 준다. 적분 꼬리의
+\NIntAuditPairs{}쌍은 탐색적 $10^{-3}$ 효과크기 게이트를 통과한
+QA 후보이며, 이 집합 전체에 대한 보정 잔차 감사는
+Section~\ref{sec:results:intaudit}에서 보고한다.
+
+\subsection{천정각 스윕: 기하와 빔 응답의 분리}
+\label{sec:results:za}
+
+full-chromatic PolyBeam \NZAPerBeam{}개 사례에서는
+$B_{\rm rel}>10^{-3}$을 동반한 엄격 국소 및 적분 후보가 모두 0건이었다.
+$B\equiv1$ 기하학 진단에서는 국소 후보 \NZANoBeamLocalPhys{}건,
+적분 후보 0건이 나타났다. 효과크기만 보면 $B_{\rm rel}>10^{-2}$인
+사례가 full PolyBeam에서 \NZAFullBiasEtwo{}건,
+$B\equiv1$에서 \NZANoBeamBiasEtwo{}건이었지만, PTE 게이트를 함께
+통과하지 못했다.
+
+\begin{table}[!t]
+\centering
+\small
+\caption{현재 QA 연산자로 재실행한 합성 천정각 스윕. 물리 후보는
+PTE와 $B_{\rm rel}>10^{-3}$을 동시에 요구한다.}
+\label{tab:za}
+\begin{tabular}{lrrr}
+\toprule
+빔 조건 & 사례 & 국소 물리 & 적분 물리 \\
+\midrule
+full H2C PolyBeam & \NZAPerBeam & \NZAFullLocalPhys & \NZAFullIntPhys \\
+$B\equiv1$ 진단 & \NZAPerBeam & \NZANoBeamLocalPhys & \NZANoBeamIntPhys \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+full PolyBeam에서 가장 작은 적분 PTE는 $z_{\rm peak}=78^\circ$,
+140.4 m 기선의 한 배경에서 0.0099였으나,
+$PTE_{\rm global,max}=0.92$이고 $B_{\rm rel}=3.9\times10^{-5}$로
+효과크기 게이트를 통과하지 못했다. 천정각 또는 지평선 근접도만으로
+오염 후보를 판정할 수 없으며, 빔 결합과 배경 조건을 포함한 전체
+연산자 응답이 필요하다.
+
+\subsection{국소 후보와 보정 잔차 감사}
+\label{sec:results:audit}
+
+거친 그리드에서 $B_{\rm rel}>10^{-2}$을 동반한 국소-물리 후보
+\NCandidateAudit{}건을 $N_{\rm null}=1000$과 짝지은 빔으로
+재평가하였다. \NCandidateLocalRetained{}건은 엄격한 국소
+유의성을 유지했지만 적분 분기는 비유의했고, 1건은
+$PTE_{\rm global,max}=\NCandidateDroppedPTE$로 0.01 임계값을
+벗어났다. 이 제한된 국소 후보 집합에서 빔 민감 후보와 빔-강건 적분
+오염 후보는 각각 \NCandidateBeamSensitive{}건과
+\NCandidateBeamRobustContam{}건이었다.
+
+동일한 7개 후보에 백색 및 매끄러운 보정 잔차를 적용한 모든 조건에서
+분류는 6개 엄격 국소/적분 비유의 사례와 1개 국소 임계값 이탈 사례로
+유지되었다. 어떤 잔차 조건도 후보를 빔 민감 또는 빔-강건 적분 오염
+등급으로 승격하지 않았다. 이 감사는 국소 후보의 과대해석을
+제한하며, 적분 꼬리 후보의 전수 감사는
+Section~\ref{sec:results:intaudit}에서 별도로 수행한다.
+
+\subsection{적분 꼬리 빔-강건 후보의 전수 잔차 감사}
+\label{sec:results:intaudit}
+
+꼬리 정밀화의 빔-강건 적분 집합은 \NIntTailBeamRobustEthree{}행,
+짝지은 고유 쌍 \NIntAuditPairs{}개로 확정되었다. 이 중
+\NIntAuditPairsEtwo{}쌍은 양쪽 빔에서 운영적
+$B_{\rm rel}>10^{-2}$ 게이트도 통과했고, 나머지
+\NIntAuditPairsMid{}쌍(30 Jy, smooth 및 lines)은
+$10^{-3}$--$10^{-2}$ 사이의 $B_{\rm rel}$을 보였다. 후보는 두
+기선--LST 셀에 집중되었다. 전형 층의 한 셀에서
+\NIntAuditPairsTypical{}쌍(세 형태학 모두, 1000 Jy, 다중 위성),
+스트레스 층의 한 셀에서 \NIntAuditPairsStress{}쌍(30--1000 Jy,
+다중 위성)이 나타났으며, 단일 위성 또는 10 Jy 조건의 쌍은 없었다.
+
+\NIntAuditPairs{}쌍 $\times$ \NIntAuditConds{}개 잔차 조건의 전체
+\NIntAuditCells{}개 (쌍, 조건) 셀에서, 어떤 조건도 단일 쌍을 단일
+빔 유지 또는 탈락 등급으로 강등시키지 않았다. 전 행렬에 걸쳐 양쪽
+빔의 $PTE_{\rm global,absint}$ 최댓값은 \IntAuditMaxPTE{}로 0.01
+게이트 대비 약 30\%의 여유를 유지했고, $B_{\rm rel}$ 최솟값은
+$\IntAuditMinBrel$로 $10^{-3}$ 게이트의 약 1.9배였다. 기준선에서
+가장 작은 여유를 보인 두 30 Jy 쌍도 전체 잔차 행렬에서
+$B_{\rm rel}$이 $[1.9,2.4]\times10^{-3}$ 범위 안에서만 움직였으며,
+$10^{-3}$ 바닥으로 떨어지지도 $10^{-2}$ 계층으로 올라서지도
+않았다. $10^{-2}$ 계층 \NIntAuditPairsEtwo{}쌍은 최강 교란
+조건($\sigma_{\rm cal}=10^{-2}$)에서도 양쪽 빔 모두
+$B_{\rm rel}>10^{-2}$를 유지했다(최소 \IntAuditMinBrelEtwo{}).
+
+\begin{table}[!t]
+\centering
+\small
+\caption{적분 꼬리 빔-강건 쌍의 전수 보정 잔차 감사 요약. 마진은
+\NIntAuditCells{}개 (쌍, 조건) 셀 전체와 양쪽 빔에 걸친 극값이다.}
+\label{tab:intaudit}
+\begin{tabularx}{\linewidth}{Xr}
+\toprule
+지표 & 값 \\
+\midrule
+감사 대상(행 / 짝지은 쌍) & \NIntTailBeamRobustEthree{} / \NIntAuditPairs \\
+잔차 조건(백색 + 매끄러운) & \NIntAuditConds \\
+$N_{\rm null}=\NNullTail$ 평가 횟수 & \NIntAuditEvals \\
+빔-강건 유지 (쌍, 조건) 셀 & \NIntAuditCells{} / \NIntAuditCells \\
+최대 $PTE_{\rm global,absint}$ (게이트 $<0.01$) & \IntAuditMaxPTE \\
+최소 $B_{\rm rel}$ (게이트 $>10^{-3}$) & $\IntAuditMinBrel$ \\
+$B_{\rm rel}>10^{-2}$ 계층 유지 쌍 & \NIntAuditPairsEtwo{} / \NIntAuditPairsEtwo \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\maybeincludegraphics[width=\linewidth]{R5_residual_audit_margins.png}
+\caption{적분 꼬리 빔-강건 \NIntAuditPairs{}쌍의 잔차 감사 마진.
+쌍별로 \NIntAuditConds{}개 잔차 조건과 양쪽 빔에 걸친
+$B_{\rm rel}$의 범위(위)와 $PTE_{\rm global,absint}$의
+최댓값(아래)을 표시하며, 점선은 $10^{-3}$·$10^{-2}$ 효과크기
+게이트와 0.01 PTE 게이트이다. 어떤 쌍도 어떤 조건에서도 게이트를
+이탈하지 않는다.}
+\label{fig:intaudit}
+\end{figure}
+
+따라서 Table~\ref{tab:hierarchy}의 최종 단계 기준으로, 이
+\NIntAuditPairs{}쌍은 오염 후보 승격 조건을 만족한다. 강조하건대
+이는 주입된 스트레스 신호에 대한 결과이다. 승격이 뜻하는 바는
+빔-강건 적분 분류가 특정 (무교란) 보정 실현의 산물이 아니라는
+것, 즉 판정 계층이 잔차 교란 하에서도 안정적으로 동일한 후보
+집합을 지목한다는 것이며, 실제 21-cm 자료에서 오염이 검출되었다는
+뜻이 아니다.
+
+\FloatBarrier
+
+% =============================================================================
+\section{논의}
+\label{sec:discussion}
+
+첫째, 국소성과 적분성은 실제로 다른 후보 집합을 만든다. 거친
+그리드와 정밀화 모두에서 적분 분기 후보가 국소 분기 후보보다 많았고,
+국소 후보 7건의 정밀 감사에서는 적분 유의성이 유지되지 않은 반면,
+적분 꼬리의 빔-강건 쌍은 전수 잔차 감사를 통과했다. 따라서 국소
+경보를 윈도우 전체의 오염으로 읽거나, 반대로 국소 분기를 적분
+분기의 선행 관문으로 사용하는 것은 타당하지 않다.
+
+둘째, 4단계 플럭스 축은 PTE와 효과크기의 역할을 분리한다. PTE
+후보 수는 플럭스에 대해 단조롭지 않았지만, $B_{\rm rel}$을 포함한
+물리 행과 Type-II 분산 분해는 플럭스가 적분 편향의 지배적 요인임을
+보였다. 10 및 30 Jy는 문헌 규모의 anchor이고, 300 및 1000 Jy는
+실제 발생률을 뜻하지 않는 상한 스트레스이므로, 모든 결과는 플럭스
+계층별로 분리해 해석해야 한다.
+
+셋째, 빔은 전역 분산을 크게 설명하지 않더라도 후보 판정을 바꿀 수
+있다. full/frozen PolyBeam은 동일한 CST 기반 공간 패턴을 공유하지만
+주파수 색수차 처리에서 다르다. 짝지은 빔 게이트는 빔 강건성만으로
+물리적 실재를 증명하려는 것이 아니라, 한 연산자 가정에만 의존하는
+후보를 식별하는 반증 단계이다. 합성 천정각 스윕에서 $B\equiv1$
+진단이 full PolyBeam보다 훨씬 많은 큰 $B_{\rm rel}$ 사례를 만든
+결과도 빔 감쇠를 제거한 기하학 상한을 물리적 후보로 해석해서는
+안 됨을 보여 준다.
+
+넷째, 적분 꼬리의 빔-강건 후보는 보정 잔차 감사를 전수
+통과하였다. 빔-강건 적분 분류가 특정 보정 실현의 산물일 가능성은
+\NIntAuditCells{}개 셀 전수 감사에서 배제되었다. 어떤 잔차
+조건도 단일 쌍을 강등시키지 않았고, PTE와 $B_{\rm rel}$의 최악
+마진은 게이트 대비 각각 약 30\%와 1.9배였다. 이로써
+Table~\ref{tab:hierarchy}의 최종 단계가 처음으로 발동하며, 이
+결과는 두 방향으로 읽어야 한다. 방법론적으로는 적분 분기가 빔
+연산자 교체와 보정 잔차 실현 모두에 강건함을 보이는 연산자
+검증이다. 물리적으로는 승격 후보가 coherent-default 다중 위성
+조건과 특정 배경 셀에 국한되며, 문헌 anchor인 30 Jy에서
+\NIntAuditPairsMid{}쌍, 상한 스트레스 300--1000 Jy에서
+\NIntAuditPairsEtwo{}쌍이 나타났다. 30 Jy 쌍의 존재는 문헌 규모의
+UEMR도 불리한 배경과 다중 위성 결맞음 하에서는 적분 QA를 발동시킬
+수 있음을 시사하지만, coherent-default 합산이 상한 스트레스
+구성이므로 발생률 주장으로 확장할 수 없다. 아울러 운영적
+$10^{-2}$ 계층으로 게이트를 조이더라도 \NIntAuditPairsEtwo{}쌍이
+잔차-안정적으로 남으므로, 본 감사의 강건성 결론은 게이트 선택에
+민감하지 않다.
+
+이 프레임워크는 관측 연구와 생산 수준 우주론 분석 사이에 위치한다.
+Starlink UEMR의 존재와 스펙트럼 특성을 확립한 관측 연구
+\citep{divruno2023,bassa2024}가 입력 현상을 제공하고, HERA의
+밴드파워·jackknife·종단간 검증이 최종 과학 산출물을 검증한다면,
+본 연구는 처리 후 잔차의 통계적 초과를 후속 검토 등급으로 분류하는
+pre-production QA 규칙을 제공한다
+\citep{abdurashidova2022,wilensky2023jackknife}.
+
+\subsection{제한점}
+
+결론은 2022년 10월 8일 HERA H6C 파생 배경을 2026년 1월 1일 TLE
+평가 창으로 재매핑한 구성에 조건부이다. 정확한 HERA 파일 식별자,
+TLE 공급자·획득 시각·필터링 규칙 및 각 TLE epoch 차이를 재현
+패키지에 명시해야 한다. 전체 카탈로그 사용은 임의의 1200개
+부분집합 편향을 제거하지만, 위성별 실제 방출 상태와 궤도 오차를
+제거하지 않는다.
+
+대응-영가설은 UEMR 부재 영가설이 아니다. 단일 위성에서는 주로
+배경--위성 교차항 위상을, 다중 위성에서는 위성 간 상대 위상을
+변경한다. coherent-default 다중 위성 합산도 실제 방출원 위상 동기를
+예측하는 모형이 아니라 상한 스트레스 구성이다. 다중 위성 상대 위상
+앙상블과 Doppler drift의 체계적 감사가 후속 단계에 필요하다.
+
+$B_{\rm rel}$ 임계값은 실제 우주론적 오차 예산으로 보정되지 않았다.
+생산 수준 적용에는 $\mathrm{mK}^2$ 밴드파워 정규화, 전체 열잡음
+공분산, 중복도 가중치, 다중 LST 결합, 신호 손실 및 계통오차 예산이
+필요하다
+\citep{cheng2018,aguirre2021validation,abdurashidova2022}.
+보정 감사는 가산적 백색·매끄러운 잔차에 한정되어 곱셈형 이득,
+대역통과 리플, 편광 누출 및 중복 보정 잔차를 포함하지 않으며
+\citep{barry2016,ewallwice2017,dillon2020redcal,kim2023beamvar},
+잔차 실현도 단일 seed에 기반한다. 다만 관측된 최악 마진이 게이트
+대비 충분히 크므로, 잔차 실현 교체가 본 감사의 분류를 바꿀
+가능성은 제한적이다.
+
+% =============================================================================
+\section{결론}
+\label{sec:conclusion}
+
+본 연구는 전체 \NTLERecords{}개 TLE, 4단계 플럭스, HERA H2C CST
+PolyBeam 및 병렬 국소/적분 PTE를 결합한 재현 가능한 지연 스펙트럼
+QA 프레임워크를 제시하였다. \NMainRows{}행 주 그리드에서 효과크기를
+포함한 후보 수는 플럭스에 따라 증가했고, $\log_{10}B_{\rm rel}$은
+플럭스, LST 층, 위성 다중성 및 기선 길이가 지배하였다. 빔과 형태학의
+전역 효과크기는 작았지만, 빔 교체는 개별 후보의 임계값 통과 여부를
+바꾸므로 짝지은 연산자 감사가 필요했다.
+
+$N_{\rm null}=1000$ 정밀화에서는 탐색적 $B_{\rm rel}>10^{-3}$에서
+빔-강건 국소 QA 행 \NLocalTailBeamRobustEthree{}건과 적분 QA 행
+\NIntTailBeamRobustEthree{}건(짝지은 \NIntAuditPairs{}쌍)이
+확인되었고, 적분 \NIntAuditPairs{}쌍 전체는 \NIntAuditConds{}개
+보정 잔차 조건의 전수 감사에서 빔-강건 분류를 유지하여 본 QA
+계층의 오염 후보 승격 기준을 만족하였다. 따라서 현 단계의 정확한
+결론은 ``후보가 없다''가 아니라, ``주입 스트레스 하에서
+국소·적분·효과크기·빔·잔차 게이트를 모두 통과하는 잘 정의된 후보
+집합이 존재하며, 이 집합은 다중 위성·고플럭스 구성과 특정 배경
+셀에 집중된다''이다. 반면 합성 천정각 스윕에서는 full PolyBeam
+조건의 물리적 후보가 없었고, 국소 후보 7건의 독립 잔차 감사에서도
+빔-강건 적분 오염 후보가 생성되지 않았다.
+
+이 구조는 단일 PTE, 단일 효과크기 또는 단일 빔 가정의 초과를 실제
+21-cm 오염으로 과대해석하지 않도록 하는 동시에, 모든 게이트를
+통과한 후보를 재현 가능하게 지목한다. 향후 실제 동시 관측과 생산
+수준 파이프라인에서는 승격 후보의 다중 위성 상대 위상·Doppler
+강건성과 우주론 단위의 오차 예산을 추가함으로써 본 QA 계층을
+완성할 수 있다.
+
+\section*{감사의 글}
+저자들은 HERA 파생 가시성 자료와 관측·처리 기반을 공개한 HERA
+Collaboration과 참여 연구진에 감사한다. 본문의 분석과 해석은
+저자들의 책임이며 HERA Collaboration의 공식 견해를 나타내지 않는다.
+
+\section*{데이터 및 코드 가용성}
+분석 코드, 활성 설정, 요약 산출물 및 그림 생성 코드는
+\url{https://github.com/kimeujin03-droid/starlink_uemr}에서 제공한다.
+4-플럭스 핵심 산출물은 \texttt{coverage\_robustness\_trials\_fourflux.csv},
+국소·적분 꼬리 정밀화 CSV, ZA 스윕 CSV 및 후보 보정 잔차 감사 CSV를
+포함한다. 적분 꼬리 전수 감사 산출물로
+\texttt{beam\_robust\_absint\_pairs\_fourflux\_1e3.csv}(후보 22행/11쌍),
+\texttt{beam\_robust\_residual\_audit\_fourflux.csv}(176행 결과 행렬),
+동 요약 CSV 및 \texttt{run\_beam\_robust\_residual\_audit.py}를
+제공한다. 원시 HERA UVH5, 대용량 null 앙상블과 외부 TLE 입력은
+재배포하지 않으며, 전체 재실행에는 원자료와 정확한 TLE 출처가
+필요하다.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{starlink_uemr_refs_complete}
+
+\end{document}

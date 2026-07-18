@@ -1,0 +1,13 @@
+{
+  "description": "Low-altitude (<30 deg peak elevation) satellite-pass stress test, paired frozen/full PolyBeam at N_null=1000",
+  "tle_meta": {
+    "tle_records_loaded_fast": 6364,
+    "tle_selection": "first_records_in_file_for_coverage_grid"
+  },
+  "low_alt_band_deg": [
+    0.0,
+    30.0
+  ],
+  "n_cases": 2,
+  "n_beam_robust": 0
+}

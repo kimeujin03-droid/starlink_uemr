@@ -1,0 +1,22 @@
+{
+  "description": "Type II ANOVA variance decomposition of log10(relative_abs_bias) on the 1296-row coverage grid",
+  "formula": "log10_Brel ~ C(beam_model) + C(morphology) + C(flux_jy) + C(multiplicity) + baseline_length_m + C(lst_stratum) + C(beam_model):C(morphology)",
+  "response_variable_definition": "log10_Brel = log10(relative_abs_bias); relative_abs_bias is the window-integrated |injected bias| / |background| ratio B_rel used elsewhere in this package's physical-candidate gate.",
+  "n_trials_total": 1296,
+  "n_trials_dropped_nonpositive_Brel": 48,
+  "flux_levels_jy": [
+    10.0,
+    30.0,
+    300.0,
+    1000.0
+  ],
+  "flux_categorical_rationale": "flux_jy is modeled as a categorical factor in the Type II ANOVA. This avoids making the candidate hierarchy depend on a specific dose-response shape. The separate log-flux slope is descriptive only.",
+  "residual_diagnostics": "Shapiro-Wilk normality: W=0.9668, p=2.697e-16; Breusch-Pagan heteroscedasticity: LM=156.627, p=2.553e-27",
+  "non_independence_caveat": "The grid rows share baselines, LST strata, beam models, morphologies, flux tiers, and multiplicity settings and are not independent draws. This Type II ANOVA is reported as a descriptive variance decomposition of factor contributions to log10(B_rel), not as a formal hypothesis test with valid nominal p-values.",
+  "baseline_length_note": "baseline_length_m is modeled as a continuous covariate, not the derived 3-level baseline_class bucket; no frf_tier field exists anywhere in this package's data products (see module docstring).",
+  "morphology_interpretation_note": "This ANOVA decomposes variance in log10(B_rel), the window-integrated |bias|/|background| ratio. A negligible morphology effect here describes bias MAGNITUDE only. It does not contradict morphology (e.g. khz_comb) being flagged as a risk factor elsewhere in this package's local-excursion/PTE-based candidate screening (Z_PS,max, PTE_global,max) -- that is a different response variable (spectral concentration / detectability of a local excursion against the matched-null distribution), not the integrated bias amplitude. The manuscript should state these as two separate, response-specific claims rather than one 'morphology matters / does not matter' statement.",
+  "flux_slope_check": "descriptive log10(B_rel) slope versus log10(flux_jy) = 1.042 dex(B_rel)/dex(flux) over flux levels [10.0, 30.0, 300.0, 1000.0]; dex(B_rel)/dex(flux) (reference: ~1 if the cross/interference term with the background dominates the injected bias, ~2 if the satellite's own power |V_sat|^2 dominates)",
+  "flux_slope_per_dex": 1.0418061379824581,
+  "r_squared": 0.7570809406281344,
+  "adj_r_squared": 0.7547205934925373
+}

@@ -1,0 +1,737 @@
+\documentclass[final,5p,times]{elsarticle}
+
+% Compile with XeLaTeX or LuaLaTeX for Korean text.
+\usepackage{kotex}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage{stfloats}
+\usepackage{makecell}
+
+\graphicspath{{./}{./figures/}{./figures/coverage_robustness/}}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\setlist{nosep,leftmargin=1.5em}
+\captionsetup{font=small,labelfont=bf}
+\journal{Astronomy and Computing}
+\sisetup{detect-all}
+\emergencystretch=3em
+\raggedbottom
+
+% ----------------------------------------------------------------------
+% Experiment counts and result macros
+% ----------------------------------------------------------------------
+\newcommand{\NBackgrounds}{5}
+\newcommand{\NBaselineGroups}{3}
+\newcommand{\NFluxTiers}{5}
+\newcommand{\NControlledRows}{600}
+\newcommand{\NCoverageRows}{648}
+\newcommand{\NTailRefinedCases}{4}
+\newcommand{\NStrictLocalMax}{0}
+\newcommand{\NStrictBeamRobust}{0}
+\newcommand{\NFullPolyStrict}{0}
+\newcommand{\NFrozenOnlyStrict}{0}
+\newcommand{\NIntegratedStrict}{0}
+\newcommand{\CoverageExploratoryFlags}{16}
+\newcommand{\ControlledPTECandidates}{0}
+\newcommand{\ControlledMinPTE}{0.0198}
+\newcommand{\PTEMinHundred}{1/(100+1)=0.0099}
+\newcommand{\PTEmaxStrictRange}{0.022--0.040}
+\newcommand{\PTEabsintStrictRange}{0.089--0.969}
+\newcommand{\BiasFloorOneEThreeCandidates}{0}
+\newcommand{\BiasFloorOneETwoCandidates}{0}
+\newcommand{\BiasFloorOneEOneCandidates}{0}
+\newcommand{\NominalExpectedFP}{6.48}
+\newcommand{\NominalAlpha}{0.01}
+\newcommand{\RobustZEpsilon}{10^{-30}}
+% Absint floor-hit recheck (N=1000) macros
+\newcommand{\NAbsintFloorHitsCoarse}{3}
+\newcommand{\NAbsintFloorAboveGate}{2}
+\newcommand{\NAbsintRetainedN1000}{2}
+\newcommand{\NAbsintBeamRobust}{0}
+
+\begin{document}
+\begin{frontmatter}
+
+\title{Starlink 유사 UEMR의 21-cm 지연 스펙트럼 QA에서 국소 최댓값 초과와 윈도우 적분 밴드파워 오염의 불일치 검증}
+
+\author[jnu]{Yujin Kim\fnref{orcid1}}
+\ead{europa5218@stu.jejunu.ac.kr}
+
+\author[jnu]{Ji-Won Kang\corref{cor1}}
+\ead{jwkang@jejunu.ac.kr}
+
+\affiliation[jnu]{organization={Jeju National University},
+                  country={Republic of Korea}}
+
+\cortext[cor1]{Corresponding author}
+\fntext[orcid1]{ORCID: \href{https://orcid.org/0009-0006-9745-2960}{0009-0006-9745-2960}}
+
+\begin{abstract}
+지구 저궤도(LEO) 위성 군집의 의도치 않은 전자기 방사(UEMR)는
+저주파 21-cm 우주론 관측에서 새로운 무선 주파수 간섭(RFI) 요인으로 제기되어 왔다.
+그러나 UEMR의 존재 자체가 곧바로 EoR 윈도우 오염을 의미하지는
+않으며, 처리된 잔차가 실제 밴드파워 수준에서 통계적ㆍ물리적으로
+유의한 편향을 만드는지는 별도의 정량 검증이 필요하다. 본 연구는
+Starlink 유사 UEMR 순방향 주입 실험을 통해, HERA 유사 지연 스펙트럼
+QA에서 국소 최댓값(local max) 통계량, 경험적 전역 PTE, 절대 윈도우 편향,
+윈도우 적분 유의성 및 빔 연산자 강건성이 서로 다른
+판정을 줄 수 있음을 보인다.
+
+이를 위해 TLE 기반 순방향 주입과 대응-영가설(matched-null) 보정을 결합하고,
+빔 연산자, 가시성 배경, 기선, 플럭스, 스펙트럼 형태학,
+위성 다중성을 포함한 통제 그리드를 구성하였다. 또한 native 기선 의존성을 평가하기 위해
+2차원 층화추출로 고른 9개 HERA H6C EW-like 기선을 사용하고, 각 기선의 11시간 native
+시간축을 10분 연속 청크로 분할하여 정온(quiet)/전형(typical)/스트레스(stress) 대표 빈을
+선택한 기선--LST 커버리지 검정을 수행하였다. 통제 그리드에서는 단순한
+강건 z(robust-z) 진단량인 $Z_{\rm PS,max}$가 절대 윈도우 편향과 분리되어
+국소 플래그를 만들 수 있었고, 전역 PTE 보정 후 강한 오염 후보는
+유지되지 않았다.
+
+커버리지 검정에서는 청크 중심 시각이 아니라 10분 청크 전체 시간 표본을 사용하여
+위성 노출 메타데이터를 다시 계산하였다. 이 수정 후 거친(coarse) 그리드에서
+$PTE_{\rm global,max}<0.01$인 시행은 1건이었으나, 그 시행의 상대 절대 편향은
+$10^{-3}$ 보고 기준값보다 작았다. $B_{\rm rel}>10^{-3}$ 조건으로 선별한
+\NTailRefinedCases{}개의 경계 근방 사례를 $N_{\rm null}=1000$으로 재평가한 결과,
+\NStrictLocalMax{}개의 엄격한 국소 최댓값 후보가 남았다. 윈도우 적분 통계량에서는 고정 빔 한정 바닥값 사례
+\NAbsintRetainedN1000{}건이 $N_{\rm null}=1000$에서도 $PTE_{\rm global,absint}<0.01$로 유지되었으나,
+짝지은 전체 PolyBeam 시행에서 기각되어 빔-강건 EoR 윈도우 밴드파워 오염 후보는 \NAbsintBeamRobust{}건이다.
+핵심 결과는 국소 최댓값 PTE,
+절대 편향 기준값, 윈도우 적분 PTE, 전체 빔 강건성을 분리한 다단계 판정
+규칙이 필요하다는 점이며, 빈 중심 메타데이터만으로 LST 층을 물리적으로 과해석하면 안 된다는
+재현성 점검 결과를 함께 제시한다.
+따라서 대응-영가설 앙상블은 UEMR 부재를 탐지하기 위한 영가설이 아니라, 위상 결맞음(phase coherence)에 대한 조건부 스트레스 테스트로 해석되어야 한다.
+\end{abstract}
+
+\begin{keyword}
+Starlink \sep UEMR \sep HERA \sep EoR \sep delay spectrum \sep RFI \sep matched null \sep empirical PTE \sep QA
+\end{keyword}
+
+\end{frontmatter}
+
+
+\section{서론}
+\label{sec:intro}
+
+재이온화 시대(EoR)의 적색편이 21-cm 신호를 측정하려면 극도로 높은 동적 범위가 필요하다.
+우주론적 신호는 저주파 가시성(visibility) 데이터에 유입되는 전경, 열잡음, 보정 잔차 및
+무선 주파수 간섭(RFI)보다 훨씬 희미하다 \citep{morales2010,deboer2017,abdurashidova2022}.
+지연 스펙트럼 및 전경 회피 분석에서 주파수에 대해 매끄러운 전경은 주로 지평선 지연 안쪽의
+웻지(wedge)에 집중되는 반면, 지평선 버퍼 바깥쪽의 모드는 EoR 윈도우로 취급된다
+\citep{parsons2012delay,liu2014wedge,thyagarajan2015}. 따라서 원자료의 시간--주파수 평면에서는
+약해 보이는 구조라도, 처리 연산자를 통과한 뒤 고지연 모드로 재조직되면 운영상 중요한 QA 문제가
+될 수 있다.
+
+대규모 LEO 위성 군집은 이 문제를 새롭게 만든다. LOFAR 관측은 110--188 MHz 범위에서
+Starlink 위성으로부터 의도치 않은 전자기 방사(UEMR)를 보고했으며 \citep{divruno2023}, 이후
+Starlink v2-Mini 관측은 더 낮은 주파수까지 확장되는 빗살(comb) 구조를 포함한 더 강한 저주파 방출을
+보고했다 \citep{bassa2024}. 그러나 Starlink 유사 UEMR의 존재와 그것이 21-cm 파워 스펙트럼의
+EoR 윈도우 오염으로 전파된다는 명제는 동일하지 않다. 처리된 잔차가 실제 밴드파워
+수준에서 통계적ㆍ물리적으로 유의한 편향을 만드는지는 별도로 검증되어야 한다.
+
+본 연구의 중심 질문은 다음과 같다.
+\begin{quote}
+Starlink 유사 UEMR이 HERA 유사 지연 스펙트럼 QA에서 국소 최댓값 초과를 만들 때, 그것을
+실제 윈도우 적분 EoR 윈도우 밴드파워 오염으로 해석할 수 있는가? 또한 국소 최댓값
+유의성, 절대 편향, 윈도우 적분 유의성, 전체 빔 강건성은 어떤 순서로
+분리되어야 하는가?
+\end{quote}
+
+다시 말해, 본 실험은 주입된 UEMR 유사 신호의 결맞음 지연-시간(delay-time) 구조가 선택된 배경, 빔 연산자, 그리고 LST 범위 조건 하에서 위상이 무작위화된 대조군에 비해 QA 통계량을 얼마나 강하게 변화시키는지를 묻는다.
+
+이 질문을 위해 본 논문은 직접적인 역탐지(inverse detection)나 실제 HERA--Starlink 동시 관측을 주장하지 않는다.
+대신 TLE 기반 순방향 주입, 대응-영가설 보정, 경험적 PTE, 절대 윈도우 편향 게이트 및
+짝지은(paired) 빔 연산자 점검을 결합한 계산적 QA 연구를 수행한다. 본 연구의 결론은 ``Starlink
+유사 UEMR이 안전하다'' 또는 ``오염을 검출했다''가 아니라, 국소 최댓값 통계량과 윈도우 적분 밴드파워
+오염을 분리하는 다단계 QA 판정 체계가 필요하다는 것이다.
+
+\section{데이터 및 주입 모델}
+\label{sec:data}
+
+\subsection{HERA 유사 배경 및 기선 설계}
+\label{sec:data:backgrounds}
+
+통제 그리드는 HERA H6C 가시성 크롭을 현실적인 시간--주파수 배경으로 사용하고, 이를 대표
+기선 그룹에서 평가한다. 가시성 배경은 HERA $(0,1)$ 기선 산출물로 고정하되, 기하학적
+지연 및 지평선 계산에는 통제된 기선 벡터 재정의를 사용한다. 이를 통해 배경 실현(realization)과
+지연-지평선 길이를 혼동하지 않는 요인 설계를 구성한다.
+
+HERA H6C 가시성 크롭은 현실적인 시간--주파수 배경으로 사용되지만, 시간 축은 통제된 순방향
+주입을 위해 TLE 평가 창으로 재매핑된다. 따라서 본 연구는 동시대 HERA--Starlink 직접 검출이
+아니라, 파이프라인 응답과 QA 통계량의 거동을 평가하기 위한 스트레스 실험이다.
+
+\begin{table*}[!t]
+\centering
+\small
+\caption{통제 그리드 및 커버리지 강건성 검정의 요약. 커버리지 검정의 LST 빈 선택은 주입 후 결과값이 아니라 주입 이전 메타데이터만 사용하였다.}
+\label{tab:design_overview_revised}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}p{3.2cm} X}
+\toprule
+실험 축 & 수준 & 분석상 역할 \\
+\midrule
+통제 그리드 & 배경, 기선, 빔, 플럭스, 형태학, 다중성 & 국소 강건 z, 전역 PTE, 절대 편향의 관계를 점검하는 닫힌 요인 그리드. \\
+커버리지 검정 & 9개 native 기선 $\times$ 정온/전형/스트레스 LST 빈 & 길이 계층과 FRF 손실 품질 계층으로 고른 HERA H6C EW-like 기선에서 기선--LST 커버리지 강건성을 점검. \\
+꼬리 정밀화 & 경계 근방 4개 사례, $N_{\rm null}=1000$ & 거친 100-영가설 그리드의 PTE 해상도 한계를 보정하고 엄격한 국소 최댓값 후보를 재판정. \\
+최종 점검 & $PTE_{\rm global,absint}$, 짝지은 전체 PolyBeam & 국소 최댓값 후보가 윈도우 적분 밴드파워 오염 및 빔-강건 후보로 유지되는지 검정. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{순방향 주입}
+\label{sec:data:forward}
+
+TLE는 결정론적 감산 모델이 아니라, 물리적으로 가능한 이동 방출원의 시간 종속 방향, 거리, 지연 및
+프린지-레이트 궤적을 생성하기 위한 입력값으로 사용된다. 안테나 쌍 $(i,j)$에 대한 근거리 기하학적
+지연은 평면파 근사가 아니라 실제 안테나--위성 거리 차이로부터 계산한다.
+\begin{equation}
+  \tau_{ij}(t)=\frac{|\mathbf{r}_{\rm sat}(t)-\mathbf{r}_{j}|-|\mathbf{r}_{\rm sat}(t)-\mathbf{r}_{i}|}{c}.
+\end{equation}
+위성 성분의 겉보기 진폭은
+\begin{equation}
+  A(t,\nu)=S_{\rm ref}\,M_{\rm spec}(\nu)\,B(t,\nu)\,R(t)\,A_{\rm smear}(t,\nu)
+\end{equation}
+로 정의한다. 여기서 $S_{\rm ref}$는 행 수준 스트레스 스케일, $M_{\rm spec}(\nu)$는 무차원 스펙트럼
+템플릿, $B(t,\nu)$는 겉보기 빔 이득, $R(t)$는 거리 감쇠, $A_{\rm smear}(t,\nu)$는 시간 및 주파수 평균에
+따른 번짐 계수이다. 주입된 가시성은 다음과 같다.
+\begin{equation}
+  V_{\rm sat}(t,\nu)=A(t,\nu)\exp[-2\pi i\nu\tau_{\rm sat}(t)].
+\end{equation}
+
+빔 연산자는 Gaussian 통제 빔, 150 MHz 고정 PolyBeam, 전체 색수차 PolyBeam으로
+분리한다. 본 연구에서 고정 PolyBeam은 빔 근사의 스트레스 사례이며, 전체 PolyBeam은
+주파수 의존 빔 연산자에 대한 짝지은 강건성 점검으로 사용한다.
+
+\subsection{플럭스 계층과 스펙트럼 형태학}
+\label{sec:data:flux_morphology}
+
+\paragraph{Four-flux integration note.}
+$S_{\rm ref}$ is not a calibrated prediction of the HERA-apparent flux of a
+particular Starlink transit, but an order-of-magnitude stress-scaling
+parameter. Published LOFAR measurements place first-generation broadband UEMR
+at roughly 0.1--10 Jy and second-generation v2-Mini broadband UEMR at roughly
+2--100 Jy in two 8-MHz windows near 120 and 161 MHz. We therefore use 10 and
+30 Jy as literature-scale low/high anchors. The 300 and 1000 Jy levels are
+deliberate stress tiers used to probe the dynamic range and failure boundary
+of the QA operator; they are not occurrence-rate or calibrated-flux claims.
+Beam coupling, slant range, polarization, off-axis response, and emission
+directionality are absorbed into the interpretation of $S_{\rm ref}$ as a
+stress coordinate rather than a direct observable.
+
+This four-flux design defines the next full-catalog coverage run:
+$S_{\rm ref}\in\{10,30,300,1000\}$ Jy. It expands the paired coverage grid
+from 648 rows to 1296 rows. Candidate counts, tail refinement, paired-beam
+audits, multiplicity bootstrap summaries, ANOVA tables, and candidate-level
+calibration audits must therefore be regenerated from the four-flux run. The
+existing 648-row result is retained only as the historical two-flux analysis
+and is not relabelled as a four-flux result.
+
+$S_{\rm ref}$는 특정 Starlink 통과에 대해 보정된 HERA의 실제 겉보기 플럭스를 예측하는 값이 아니라,
+문헌에 보고된 저주파 Starlink UEMR의 크기 범위를 기준으로 파이프라인 응답을 시험하기 위한 주입
+척도이다. 본 연구는 낮은 계층과 스트레스 계층을 모두 포함하되, 절대 검출 임계값을 제시하지 않는다.
+
+스펙트럼 형태학은 매끄러운 광대역, 버스트성 광대역, 협대역 선형, kHz-comb 뱅크를 중심으로
+구성한다. 초기 분석에서 비매끄러운 형태학은 단순 영가설 또는 특정 연산자 설정에서
+국소 QA 플래그를 만들 수 있었으나, 본 논문의 최종 해석은 형태학 자체의 보편적 위험성이 아니라
+대응-영가설 보정, 빔 연산자, PTE 종류 및 윈도우 적분 점검에 따라 판정이 달라진다는
+점에 둔다.
+
+\section{QA 지표 및 다단계 판정 기준}
+\label{sec:metrics}
+
+본 연구의 분석 대상은 전체 HERA 생산 파이프라인의 최종 우주론 산출물이 아니라, 고정된 HERA 유사
+가시성 배경 위에 주입된 Starlink 유사 UEMR이 지연-윈도우 QA 지표에 남기는 상대적 변화이다.
+주입 전후의 처리 차이는 다음과 같이 둔다.
+\begin{equation}
+  V_{\rm int}
+  =
+  P_{\rm QA}(V_{\rm bg}+V_{\rm sat})
+  -
+  P_{\rm QA}(V_{\rm bg}).
+\end{equation}
+여기서 $P_{\rm QA}$는 지연 변환, EoR 윈도우 마스크 적용 및 윈도우 통계량 계산까지의 공통 QA 절차를
+의미한다.
+
+버퍼가 적용된 EoR 윈도우 프록시는
+\begin{equation}
+  \tau_{\rm win}=\tau_{\rm hor}+100~{\rm ns}, \qquad
+  W_{\rm win}=\{\tau:\ |\tau|\ge \tau_{\rm win}\}
+\end{equation}
+로 정의한다. 절대 윈도우 편향은
+\begin{equation}
+  B_{\rm rel}
+  =
+  \frac{
+  \sum_{\tau\in W_{\rm win}}
+  \left|
+  |\widetilde{V}_{\rm inj}(\tau)|^2-
+  |\widetilde{V}_{\rm bg}(\tau)|^2
+  \right|
+  }{
+  \sum_{\tau\in W_{\rm win}}
+  |\widetilde{V}_{\rm bg}(\tau)|^2
+  }.
+\end{equation}
+이는 보정된 우주론적 밴드파워 추정량이 아니라 물리적 진폭 게이트로 사용되는 상대 편향 지표이다.
+
+\subsection{대응-영가설 및 경험적 PTE}
+\label{sec:metrics:pte}
+
+각 시행에 대해 대응-영가설 앙상블은 주입된 시간--주파수 지지 영역과 진폭 포락선을 보존하되,
+위상을 무작위화하여 구성한다.
+\begin{equation}
+  V_{\rm sat,null}^{(r)}(t,\nu)=|V_{\rm sat}(t,\nu)|\exp[i\phi_r].
+\end{equation}
+여기서 $\phi_r$의 구체적 의존성은 실험에 따라 다르다. 통제 그리드(matched-null 밴드파워 전파 실험)에서는
+$\phi_r(t)$, 즉 적분 시간당 독립적으로 추출된 하나의 위상을 사용하므로 주파수 방향 스펙트럼 결맞음이
+보존되지만 시간 방향 fringe-rate 결맞음이 파괴된다. 커버리지 강건성 검정에서는 위성별 전역 스칼라 위상
+$\phi_r^{(s)}$를 사용하여 각 위성의 지연--시간 코히런트 구조를 보존한 채 위성 간 상대 위상만 무작위화한다.
+단일 위성 커버리지 시행에서는 배경--위성 교차항 위상만 달라지며 위성 자체의 지연 스파이크 구조는 영가설에도
+그대로 남는다. 다중 위성 커버리지 시행에서는 위성 간 코히런스 증폭(coherence amplification)이 영가설에서
+무작위화되어, 관측값과 영가설의 차이는 위성 간 상대 위상 결맞음에 의한 구조 차이를 반영한다.
+
+이 영가설의 의미는 엄밀히 제한된다. 본 대응-영가설은 ``UEMR 신호가 없다''는 영가설이 아니라,
+동일한 지지 영역과 진폭 포락선을 갖는 위상 무작위화 대조군이다. 통제 그리드에서는 시간 방향
+위상 스크램블로 fringe-rate 조직화를 제거한 대조군이며, 커버리지 검정에서는 위성별 전역 위상
+회전으로 위성 간 코히런스를 제거한 대조군이다. 두 경우 모두, 개별 위성의 지연 영역 에너지 배분은
+영가설에서도 변하지 않는다. 따라서 실제 주입 신호에서 국소 통계량이 상승하는 것은 위성 주입의
+위상 결맞음 또는 위성 간 코히런스 증폭이 무작위화 대조군보다 강하다는 사실을 반영할 수 있다.
+본 연구는 이 차이를 오염 검출로 곧바로 해석하지 않고, 결맞은 구조가 QA 통계량을 얼마나 민감하게
+움직이는지를 보는 조건부 스트레스 테스트로 해석한다.
+
+후속(downstream) 프록시 섭동은
+\begin{equation}
+  \Delta\widehat{P}_{\rm UEMR}(k)
+  =
+  \widehat{P}_{\rm inj}(k)-\widehat{P}_{\rm bg}(k)
+\end{equation}
+로 정의하고, 영가설 실현에도 동일한 추정량을 적용한다.
+
+국소 강건 z 진단량은
+\begin{equation}
+  Z_{\rm PS}(k)=
+  \frac{
+  \Delta\widehat{P}_{\rm UEMR}(k)
+  -
+  \mathrm{median}_{r}[\Delta\widehat{P}^{(r)}_{\rm null}(k)]
+  }{
+  \hat{\sigma}_{r}(k)
+  },
+\end{equation}
+\begin{equation}
+  \hat{\sigma}_{r}(k)=
+  \begin{cases}
+    1.4826\,\mathrm{MAD}_{r}[\Delta\widehat{P}^{(r)}_{\rm null}(k)] & \text{if } > \RobustZEpsilon, \\
+    \mathrm{std}_{r}[\Delta\widehat{P}^{(r)}_{\rm null}(k)]          & \text{if MAD } \le \RobustZEpsilon \text{ and std} > \RobustZEpsilon, \\
+    \mathrm{NaN}                                                       & \text{otherwise}.
+  \end{cases}
+\end{equation}
+본 연구에서 $Z_{\rm PS,max}$는 검출량이 아니라 국소 탐색적 진단량이다.
+\begin{equation}
+  Z_{\rm PS,max}=\max_{k\in W_{\rm win}} Z_{\rm PS}(k).
+\end{equation}
+이 대체 규칙은 영가설 MAD가 수치적으로 0에 수렴하는 퇴화 사례를 처리하기 위한 안전장치이다.
+중앙값/MAD 기반 강건 정규화는 극단값에 둔감한 척도 추정량으로 널리 사용된다 \citep{hampel1986,huber1981,rousseeuw1993}.
+영가설 MAD가 작아지는 조건에서는 작은 절대 섭동도 큰 강건 z로 증폭될 수 있으므로,
+$Z_{\rm PS,max}$ 단독으로 오염을 판정하지 않는다.
+
+경험적 PTE는 다음과 같이 계산한다.
+\begin{equation}
+  PTE(T_{\rm obs})
+  =
+  \frac{1+\#\{T_{\rm null}^{(r)}\ge T_{\rm obs}\}}{N_{\rm null}+1}.
+\end{equation}
+본 연구는 두 종류의 PTE를 구분한다.
+\begin{enumerate}
+  \item $PTE_{\rm global,max}$: EoR 윈도우 내부 최댓값 통계량에 대한 전역 PTE. 국소 최댓값 초과의 통계적 희귀성을 평가한다.
+  \item $PTE_{\rm global,absint}$: 윈도우 적분 절대 통계량에 대한 전역 PTE. 윈도우 적분 밴드파워 수준의 초과 여부를 평가한다.
+\end{enumerate}
+$PTE_{\rm global,max}<0.01$은 엄격한 국소 최댓값 후보 기준으로 사용하지만, 이 기준만으로
+윈도우 적분 오염을 주장하지 않는다. 경험적 PTE는 유한한 영가설 앙상블에서 가능한 해상도가
+$1/(N_{\rm null}+1)$로 제한되므로, 엄격한 임계값 근처에서는 꼬리 해상도 점검이 필요하다
+\citep{davison1997,north2002}. 또한 다수의 시행에 동일한 임계값을 적용하면 다중 탐색(look-elsewhere) 효과가 발생하므로,
+시행 수준 PTE는 그리드 전체의 검출 확률로 직접 해석하지 않는다 \citep{westfall1993}.
+본 연구는 $PTE_{\rm global,max}$와 $PTE_{\rm global,absint}$에 동일한 0.01 보고 임계값을 사용하지만,
+두 통계량의 의미를 동일시하지 않는다. 전자는 국소 최댓값 초과의 꼬리 사건을, 후자는 윈도우 적분
+초과를 평가한다. 같은 숫자 임계값은 표기상 일관된 선별 수준일 뿐이며, 윈도우 적분 오염 주장은
+반드시 윈도우 적분 PTE와 빔 강건성 점검을 별도로 통과할 때에만 허용한다.
+
+\subsection{최종 QA 판정 계층}
+\label{sec:metrics:hierarchy}
+
+본 연구는 다음의 다단계 판정 구조를 사용한다.
+\begin{enumerate}
+  \item $Z_{\rm PS,max}$ 또는 $PTE_{\rm global,max}<0.05$: 탐색적/국소 플래그.
+  \item $PTE_{\rm global,max}<0.01$: 엄격한 국소 최댓값 통계량 후보.
+  \item $B_{\rm rel}>B_{\rm floor}$: 절대 편향 진폭 게이트.
+  \item $PTE_{\rm global,absint}<0.01$: 윈도우 적분 후보.
+  \item 짝지은 전체 PolyBeam 시행에서도 엄격 기준 유지: 빔-강건 후보.
+\end{enumerate}
+따라서 코드상 편향 게이트를 통과한 시행이라도, $PTE_{\rm global,absint}$와 전체 PolyBeam 강건성을
+통과하지 않으면 윈도우 적분 밴드파워 오염으로 해석하지 않는다. 본 연구는 민감도 보고를 위해
+$B_{\rm floor}\in\{10^{-3},10^{-2},10^{-1}\}$를 함께 제시하고, 본 실험의 요약 표에서는 $B_{\rm floor}=10^{-2}$를
+운영적 보고 수준으로 사용한다. 이 값은 전체 윈도우 적분 섭동이 배경 윈도우 파워의 1\%를
+넘는 경우만 다음 단계 검토 대상으로 남기는 명시적 진폭 게이트이다. 그러나 이는 열잡음 공분산,
+보정 잔차 예산, 또는 특정 HERA 상한 분석의 계통오차 하한에 고정한 보편 권고값이 아니다.
+실제 생산 수준 QA에서는 해당 관측의 잡음/계통오차 예산에 의해 $B_{\rm floor}$를 사전에 정해야 한다.
+
+\section{실험 설계}
+\label{sec:experiments}
+
+\subsection{통제 그리드}
+\label{sec:experiments:controlled}
+
+통제 그리드는 형태학, 빔, 플럭스, 다중성, 기선, 배경 조건을 교차시켜
+$Z_{\rm PS,max}$, 경험적 PTE, 절대 편향의 관계를 평가한다. 이 단계의 목적은 오염을
+확정하는 것이 아니라, 국소 강건 z 플래그와 전역 PTE 보정이 어떻게 달라지는지 확인하는 것이다.
+
+\subsection{Native 9-baseline robustness 및 11시간 기선--LST 커버리지 검정}
+\label{sec:experiments:coverage}
+
+커버리지 검정의 첫 번째 목적은 단일 0\_1 기선 크롭에 의존하지 않고, native HERA H6C EW-like
+기선에서 결과가 어떻게 변하는지 평가하는 것이다 \citep{deboer2017,abdurashidova2022}. 이를 위해
+9개 native 기선을 2차원 층화추출로
+선택하였다. 첫 번째 축은 기선 길이 계층이며, 이는 delay horizon
+$\tau_{\rm hor}=|\mathbf{b}|/c$를 결정한다 \citep{parsons2012delay,liu2014wedge}. 두 번째 축은
+fringe-rate filter(FRF) 손실 품질 계층이다. FRF는 fringe-rate 공간에서 visibility를 시간
+필터링하는 연산자이며 \citep{parsons2015frf,garsden2024frf}, 이동 송신원 신호의 잔류 power는 기선
+기하와 위성 궤도에 따라 달라진다. 각 기선의 FRF 손실 계수, 즉 위성 신호 power 중 FRF 적용 후
+남는 비율을 대표 LEO 궤도에서 계산한 뒤, 같은 길이 계층 안에서 low/mid/high 등급으로 나누었다.
+FRF 손실이 낮은 기선은 이동 송신원 신호에 더 민감하므로, 각 길이 계층 안에서 보수적, 중간,
+낙관적 시나리오를 함께 대표하도록 하였다. 이 설계로 길이 계층과 FRF 손실 품질 계층의 조합에서
+총 9개 native 기선을 사용하였다.
+
+두 번째 목적은 각 native 기선 안에서 위성 노출과 배경 상태가 다른 시간 구간을 비교하는 것이다.
+이를 위해 각 UVH5 기선 파일의 native 시간축을 10분에 해당하는
+연속 표본 묶음으로 잘랐다. 코드에서는 native cadence로부터 $n_{\rm per\,bin}$을 계산하고,
+$i$번째 빈을 시간 인덱스 $[i\,n_{\rm per\,bin},(i+1)n_{\rm per\,bin})$로 정의한다. 이후 위성 기하
+계산을 위해 각 빈의 내부 cadence를 보존한 채 시작 시각만 2026년 1월 1일 UTC의 대응 10분
+구간으로 재매핑하였다. 따라서 본 논문에서 ``LST 빈''이라고 부르는 항목은 새로 등간격 LST 좌표를
+보간해 만든 빈이 아니라, native 관측 시간 표본의 10분 연속 청크에 붙인 분석 라벨이다.
+
+각 crop은 zenith 부근의 peak response를 포착하도록 설계되었지만, 위성 pass의 모든 입사각과
+fringe-rate evolution을 연속적으로 추적하는 장시간 주입은 아니다. 본 검정은 zenith 부근의 TLE
+ensemble, native 기선 층화, 그리고 10분 청크별 위성 노출 재계산으로 이 제한을 부분적으로 보완하는
+robustness assessment이다.
+
+9개 기선 각각에 대해 주입 이전 메타데이터만을 사용하여 정온, 전형, 스트레스 빈을 하나씩 선택하였다.
+구체적으로 위성 노출 프록시 $E_{\rm sat}$, 플래그 비율 $f_{\rm flag}$, 그리고 가능한 경우 영가설 전용
+윈도우 MAD 프록시를 계산하였다. 정온 빈은 낮은 위성 노출 후보 중 플래그 비율이 해당 기선의
+중앙값에 가까운 빈으로 정의하였다. 여기서 $E_{\rm sat}$는 빈 중심 시각 하나가 아니라 해당 10분 청크의
+모든 시간 표본에서 계산한 빔 가중 위성 노출의 빈 평균 프록시이다. 중심 시각 노출은 이력(provenance)
+열로 보존하지만 층화에는 사용하지 않는다. 전형 빈은 강건 척도화된 $(E_{\rm sat}, f_{\rm flag}, {\rm nullMAD})$
+공간에서 중앙값 벡터에 가장 가까운 빈으로 선택하였다. 스트레스 빈은
+\begin{equation}
+  R_{\rm pre}=\frac{E_{\rm sat}}{{\rm nullMAD}_{\rm win}+\epsilon}
+\end{equation}
+가 가장 큰 빈으로 선택하되, 같은 빈이 이미 선택된 경우 다음 순위 빈을 사용하였다. 중요한 점은 이 층화가
+$Z_{\rm PS,max}$, PTE, $B_{\rm rel}$ 등 주입 후 결과값을 사용하지 않았다는 것이다.
+이로써 27개 기선--LST 커버리지 셀을 구성하고, 형태학, 플럭스, 다중성, 빔 연산자를
+교차하여 \NCoverageRows{}개 축소 그리드 시행을 실행하였다. 이 셀들은 독립적인 우주론 표본이 아니라,
+기선 기하와 관측 상태에 대한 커버리지 탐침으로 해석한다.
+
+커버리지 검정에서 ``가시 위성''은 배경 청크의 시간 표본 전체에서 최고도(peak altitude)가
+$70^\circ$ 이상인 위성으로 정의한다. TLE 파일에서는 순서상 처음 1200개 고유 기록만
+로드하였으므로, 이 TLE 부분집합이 전체 Jan 2026 Starlink 군집 전체를 대표하지 않을 수 있다.
+다중 위성 주입에서는 고도 순위 상위 최대 12개 위성을 선택하였다.
+
+\subsection{Synthetic zenith-angle sensitivity analysis}
+\label{sec:experiments:za_sweep}
+
+To isolate geometric sensitivity from the heterogeneous TLE ensemble, we
+perform an auxiliary synthetic-orbit sweep at azimuth 90 degrees and altitude
+550 km. The peak zenith angle is varied over
+$5^\circ,15^\circ,30^\circ,45^\circ,60^\circ,70^\circ,$ and $78^\circ$.
+Three representative east-west baselines (14.6, 140.4, and 207.3 m), five
+background realizations, and two beam conditions are crossed. The primary beam
+condition is the full-chromatic HERA H2C CST PolyBeam; $B=1$ is retained only
+as a geometry-only diagnostic comparator and is not used as a physical
+candidate gate. Holding $S_{\rm ref}=300$ Jy fixed isolates the angular
+response, yielding $5\times3\times7\times2=210$ cases. Every case is evaluated
+with the same $PTE_{\rm global,max}$, $PTE_{\rm global,absint}$, and
+$B_{\rm rel}$ hierarchy used in the main analysis.
+
+The older 210-case zenith-angle sweep used a null-p95 excess metric rather
+than the present PTE/$B_{\rm rel}$ candidate hierarchy. Its design can be
+reused, but its numerical exceedance counts are not carried into the current
+paper unless the cases are rerun under the current operator and null
+definition.
+
+\subsection{꼬리 해상도 정밀화}
+\label{sec:experiments:tail}
+
+초기 커버리지 그리드의 영가설 앙상블은 $N_{\rm null}=100$이었으므로 가능한 최소 경험적 PTE는
+$\PTEMinHundred$이었다. 엄격한 임계값 주변에서 최종 후보 수를 안정적으로 결정하기 위해,
+$PTE_{\rm global,max}\le0.03$ 또는 $Z_{\rm PS,max}>3$ 근방이면서 $B_{\rm rel}>10^{-3}$인 경계 근방 \NTailRefinedCases{}개
+사례를 $N_{\rm null}=1000$으로 재계산하였다. 이 정밀화 결과를 최종 국소 최댓값 후보 판정에 사용한다.
+
+추가로, 거친 그리드에서 $PTE_{\rm global,max}$ 기준이 아닌 $PTE_{\rm global,absint}$가 $\PTEMinHundred$
+바닥값에 도달한 사례를 별도로 확인하였다. 이 사례들은 $PTE_{\rm global,max}\approx0.7$이어서 위의 꼬리
+정밀화 선별 조건에서 제외되었다. 해당 사례는 모두 동일 셀
+($11\_10$, LST 빈 16, 정온, 고정 PolyBeam, 다중)에 속하며 \NAbsintFloorHitsCoarse{}건이다. 이 중
+$B_{\rm rel}>10^{-3}$ 조건을 만족하는 \NAbsintFloorAboveGate{}건을 $N_{\rm null}=1000$으로 재검증하였다.
+재검증 결과는 \ref{sec:results:absint}절에서 서술한다.
+
+\section{결과}
+\label{sec:results}
+
+\subsection{통제 그리드: 국소 강건 z는 오염 판정 기준이 아니다}
+\label{sec:results:controlled}
+
+통제 그리드에서 $Z_{\rm PS,max}$ 기반 국소 플래그는 일부 발생했지만, 절대 윈도우 편향과의
+상관은 약했고 전역 PTE 기준의 강한 오염 후보로 유지되지 않았다. 특히
+$PTE_{\rm global,max}<0.01$을 만족한 시행은 \ControlledPTECandidates{}건이었고, 최소 PTE도
+약 \ControlledMinPTE{} 수준에 머물렀다. 이는 $Z_{\rm PS,max}>3$와 같은 국소 강건 z 임계값이
+윈도우 내 최댓값 통계량과 영가설 MAD 민감도의 영향을 받기 때문에 오염 검출 기준으로 직접
+승격될 수 없음을 보여준다.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.82\textwidth]{R2_z_vs_pte_global.png}
+\caption{$Z_{\rm PS,max}$와 경험적 $PTE_{\rm global,max}$의 관계. 수직선은 $Z_{\rm PS,max}=3$, 수평선은 $PTE=0.05$ 및 $PTE=0.01$을 표시한다. 국소 강건 z 플래그는 전역 PTE 기준의 엄격한 오염 후보와 동일하지 않다.}
+\label{fig:z-vs-pte}
+\end{figure*}
+
+\subsection{커버리지 검정: 빈 전체 메타데이터 수정 후 엄격한 후보는 남지 않는다}
+\label{sec:results:coverage}
+
+11시간 기선--LST 커버리지 검정에서는 거친 100-영가설 그리드에서 \CoverageExploratoryFlags{}개의
+탐색적 플래그가 나타났다. 초기 점검에서 $(0\_1,\ \mathrm{LST\ bin}\ 36)$ 셀은 10분 청크의 중심
+시각 위성 노출 프록시에서는 가시 위성이 0개였지만, 같은 청크의 모든 native 시간 표본을 따라
+위성 고도와 빔 응답을 평가하면 4개의 가시 위성과 고고도 통과를 포함하였다. 따라서 본 공개판에서는
+LST 빈 선택 메타데이터를 빈 중심 프록시가 아니라 빈 전체 시간 표본 기준으로 재계산하였다. 이 사례는
+오류를 드러낸 진단 예시이며, 수정된 메타데이터 산출과 빈 재선택은 0\_1 하나가 아니라 9개 기선
+전체에 동일하게 적용하였다. 이 수정 후
+$(0\_1,\mathrm{bin}\ 36)$ 셀은 선택된 전형 셀에서 제외되었고, $0\_1$ 기선의 선택된 전형
+셀은 LST 빈 44로 바뀌었다.
+
+9개 기선 각각의 정온/전형/스트레스 셀, 즉 27개 기선--빈 셀의 새 선택으로
+\NCoverageRows{}개 커버리지 시행을 전부 재실행한 결과, 거친 $N_{\rm null}=100$ 그리드에서
+$PTE_{\rm global,max}<0.01$인 시행은 1건이었다. 그러나 이 시행은
+$B_{\rm rel}=5.53\times10^{-4}$로 $10^{-3}$ 보고 기준값을 넘지 못한다. $B_{\rm rel}>10^{-3}$ 및
+경계 근방 조건으로 \NTailRefinedCases{}건을 선별하여 $N_{\rm null}=1000$으로 꼬리 정밀화를 수행하면,
+\NStrictLocalMax{}건이 $PTE_{\rm global,max}<0.01$ 기준에 남는다. 따라서 수정된 커버리지 결과의 결론은
+``단일 셀에 국한된 엄격 반응''이 아니라 ``빈 전체 메타데이터 수정 후 꼬리 정밀화된 엄격한
+국소 최댓값 후보 없음''이다.
+
+\begin{table*}[!t]
+\centering
+\small
+\caption{수정된 선택 후 $B_{\rm rel}>10^{-3}$ 경계 근방 꼬리 정밀화. $N_{\rm null}=1000$ 재평가 후 네 사례 모두 엄격한 국소 최댓값 기준 $PTE_{\rm global,max}<0.01$을 통과하지 못한다.}
+\label{tab:tail_refined_cases}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.2cm}
+>{\centering\arraybackslash}p{2.4cm}
+>{\centering\arraybackslash}p{1.9cm}
+>{\centering\arraybackslash}p{1.9cm}
+>{\centering\arraybackslash}p{1.8cm}
+>{\centering\arraybackslash}p{1.6cm}}
+\toprule
+셀/조건 & 형태학 & $PTE_{\rm max}^{100}$ & $PTE_{\rm max}^{1000}$ & $PTE_{\rm absint}^{1000}$ & $B_{\rm rel}$ \\
+\midrule
+$0\_197$ 빈 36 전체 빔/다중 & 매끄러운 광대역 1000 Jy & 0.0198 & 0.0220 & 0.913 & 0.0132 \\
+$0\_197$ 빈 36 전체 빔/다중 & kHz-comb 1000 Jy & 0.0297 & 0.0250 & 0.903 & 0.0117 \\
+$0\_197$ 빈 0 고정 빔/단일 & 매끄러운 광대역 1000 Jy & 0.0297 & 0.0400 & 0.0889 & 0.0096 \\
+$23\_80$ 빈 48 전체 빔/단일 & 협대역 선형 1000 Jy & 0.0198 & 0.0340 & 0.969 & 0.0018 \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+편향 기준값 민감도도 후보 해석에 중요하다. $B_{\rm floor}=10^{-3}$에서는
+\BiasFloorOneEThreeCandidates{}건, $10^{-2}$에서는 \BiasFloorOneETwoCandidates{}건, $10^{-1}$에서는
+\BiasFloorOneEOneCandidates{}건이 꼬리 정밀화 후 남는다. 따라서 국소 최댓값 PTE 후보 수는 절대 편향 기준값의
+정의에 의존하며, PTE 단독으로 물리적 오염을 주장할 수 없다. 본 연구는 $B_{\rm floor}=10^{-2}$를
+보편 권고값이 아니라 본 시험 영역의 보고 수준 진폭 게이트로만 사용한다. 생산 수준 분석에서는
+열잡음 공분산, 보정 잔차 규모, 전경 누출 예산 등으로 사전에 정한 물리적 기준값이
+이 역할을 대체해야 한다.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.82\textwidth]{R3_bias_floor_sensitivity.png}
+\caption{절대 편향 기준값 민감도. 엄격한 국소 최댓값 후보 수는 $B_{\rm floor}$ 설정에 따라 달라질 수 있다. $B_{\rm floor}=10^{-2}$는 본 시험 영역의 보고 수준 진폭 게이트이며, 보편적인 물리 상수가 아니다. 실제 생산 수준 QA에서는 해당 관측의 잡음 및 계통오차 예산에 근거하여 $B_{\rm floor}$를 사전에 정해야 한다.}
+\label{fig:bias-floor}
+\end{figure*}
+
+\subsection{윈도우 적분 PTE: 빔-강건 광역 밴드파워 초과는 없다}
+\label{sec:results:absint}
+
+꼬리 정밀화된 경계 근방 사례 \NTailRefinedCases{}건은 모두 $PTE_{\rm global,max}<0.01$을 만족하지 못한다.
+또한 이 사례들의 윈도우 적분 통계량 $PTE_{\rm global,absint}$는 \PTEabsintStrictRange{} 범위에 머문다.
+
+한편 $PTE_{\rm global,absint}$ 특화 바닥값 재검증에서는 다른 결과가 관측되었다. 거친 그리드에서
+$PTE_{\rm global,absint}$ 바닥값($\PTEMinHundred$)에 도달한 $B_{\rm rel}>10^{-3}$인 \NAbsintFloorAboveGate{}건은
+$N_{\rm null}=1000$ 재평가에서도 $PTE_{\rm global,absint}<0.01$이 유지되었다(고정 PolyBeam/매끄러운/1000 Jy:
+$PTE_{\rm absint}=0.006$, $n_{\rm exceed}=5/1000$; 고정 PolyBeam/kHz-comb/1000 Jy: $PTE_{\rm absint}=0.008$,
+$n_{\rm exceed}=7/1000$). 이 초과는 $PTE_{\rm global,max}\approx0.74$에서도 나타나지 않는 분산된 적분
+초과로, 두 위성의 코히런트 합산이 위성별 전역 위상 무작위화 대조군보다 더 많은 윈도우 적분 파워를
+남기는 패턴에 기인한다.
+
+그러나 이 두 사례는 모두 고정 PolyBeam에서만 관찰되며, 짝지은 전체 PolyBeam 시행의
+$PTE_{\rm global,absint}$는 각각 0.030과 0.020으로, $N=100$ 단계에서도 이미 엄격 기준을 통과하지
+못한다. 따라서 빔-강건 윈도우 적분 후보는 \NAbsintBeamRobust{}건이다. 수정된 커버리지 검정에서는
+국소 최댓값과 빔-강건 윈도우 적분 양쪽 모두에서 밴드파워 오염 후보가 확인되지 않는다.
+
+\subsection{전체 PolyBeam 강건성: 빔-강건 후보는 없다}
+\label{sec:results:beam_robustness}
+
+수정된 꼬리 정밀화에서는 고정 PolyBeam 엄격 후보도, 전체 PolyBeam 엄격 후보도 남지 않는다. 따라서
+빔-강건 엄격 후보는 \NStrictBeamRobust{}건이며, 전체 PolyBeam 엄격 후보도 \NFullPolyStrict{}건이다.
+초기 빈 중심 프록시 결과에서 보였던 외관상의 단일 셀 반응은 빈 전체 위성 메타데이터 수정 후
+선택된 셀 자체가 바뀌면서 유지되지 않았다. 이는 LST 빈 층화가 위성 통과 기하를 충분히
+반영해야 하며, 빈 중심 노출 프록시만으로 ``정온'' 또는 ``전형'' 분류를 물리적으로 해석하면 안 된다는
+방법론적 경고를 제공한다.
+
+\begin{table*}[!t]
+\centering
+\small
+\caption{수정된 꼬리 정밀화 요약. 빈 전체 위성 노출 메타데이터를 사용한 재실행 후 엄격한 국소 최댓값 후보는 남지 않는다. 하단 블록은 $PTE_{\rm global,absint}$ 특화 바닥값($N=100$) 사례의 별도 $N=1000$ 재검증 결과이며, 빔-강건 기준에서는 후보가 없다.}
+\label{tab:tail_summary}
+\begin{tabularx}{\textwidth}{X >{\centering\arraybackslash}p{2.4cm}}
+\toprule
+지표 & 값 \\
+\midrule
+\multicolumn{2}{l}{\textit{$PTE_{\rm global,max}$ 꼬리 정밀화}} \\
+정밀화된 경계 근방 사례 & \NTailRefinedCases \\
+$PTE_{\rm global,max}<0.01$ & \NStrictLocalMax \\
+$PTE_{\rm global,max}<0.01$ 및 $B_{\rm rel}>10^{-3}$ & \BiasFloorOneEThreeCandidates \\
+$PTE_{\rm global,max}<0.01$ 및 $B_{\rm rel}>10^{-2}$ & \BiasFloorOneETwoCandidates \\
+$PTE_{\rm global,max}<0.01$ 및 $B_{\rm rel}>10^{-1}$ & \BiasFloorOneEOneCandidates \\
+전체 PolyBeam 엄격 후보 & \NFullPolyStrict \\
+빔-강건 엄격 후보 & \NStrictBeamRobust \\
+고정 빔 전용 엄격 후보 & \NFrozenOnlyStrict \\
+\midrule
+\multicolumn{2}{l}{\textit{$PTE_{\rm global,absint}$ 바닥값 재검증 ($N=1000$)}} \\
+거친 그리드 absint 바닥값 사례 & \NAbsintFloorHitsCoarse \\
+$B_{\rm rel}>10^{-3}$ 재검증 사례 & \NAbsintFloorAboveGate \\
+$N=1000$ 후 $PTE_{\rm absint}<0.01$ 유지 (고정 빔 전용) & \NAbsintRetainedN1000 \\
+빔-강건 윈도우 적분 후보 & \NAbsintBeamRobust \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\FloatBarrier
+
+\section{논의}
+\label{sec:discussion}
+
+본 연구의 결과는 다섯 가지 점을 강조한다.
+
+첫째, 국소 강건 z 또는 국소 최댓값 PTE는 오염 판정 기준이 아니라 QA 진단량이다.
+$Z_{\rm PS,max}$는 윈도우 내 최댓값 통계량이며, 분모가 대응-영가설 MAD로 정규화되므로 영가설 분산이
+작은 조건에서 절대 편향과 분리된 국소 플래그를 만들 수 있다. 따라서 $Z_{\rm PS,max}>3$ 또는
+$PTE_{\rm global,max}<0.01$을 곧바로 EoR 윈도우 오염 검출로 해석하면 안 된다.
+
+둘째, 국소 최댓값 초과와 윈도우 적분 밴드파워 오염은 분리되어야 하며, 두 종류의 PTE는 서로 독립적으로 점검해야
+한다. $PTE_{\rm global,max}$ 기준 꼬리 정밀화 대상 \NTailRefinedCases{}건은 $N_{\rm null}=1000$ 재평가 후
+$PTE_{\rm global,max}<0.01$을 만족하지 못했고, 이 사례들의 $PTE_{\rm global,absint}$도 0.0889 이상이었다.
+한편 $PTE_{\rm global,absint}$ 특화 바닥값 사례 중 $B_{\rm rel}>10^{-3}$인 \NAbsintFloorAboveGate{}건은
+$N_{\rm null}=1000$에서도 $PTE_{\rm global,absint}<0.01$이 유지되었으나, 짝지은 전체 PolyBeam 시행에서
+기준을 통과하지 못해 빔-강건 후보에는 해당하지 않는다. 이는 $PTE_{\rm global,absint}$ 바닥값 도달 사례도
+$PTE_{\rm global,max}$ 기준 꼬리 정밀화와 별도로 점검되어야 함을 보여주며, 두 통계량을 단일 선별 기준으로
+묶어서는 안 된다는 방법론적 경고를 제공한다.
+
+셋째, 빔 연산자 강건성은 필수적인 판정 단계이다. 수정된 꼬리 정밀화에서는 고정 PolyBeam 엄격
+후보도 전체 PolyBeam 엄격 후보도 남지 않았다. 따라서 본 연구의 최종 결과는 빔-강건 오염 검출이
+아니라, 수정된 층화와 다단계 판정 규칙을 통과하는 후보가 없다는 비검출이다.
+
+넷째, LST 빈 층화 메타데이터는 빈 중심 프록시가 아니라 native 10분 청크 전체의 위성 기하를
+반영해야 한다. 초기 점검에서 $(0\_1,\mathrm{bin}\ 36)$은 청크 중심 기준 위성 노출이 0이었지만,
+청크 전체 시간 표본 순위에서는 고고도 위성 통과를 포함하였다. 이 불일치를 9개 기선 전체의
+메타데이터 산출에 적용해 수정하자 선택된 셀이 27개 중 15개 항목에서 바뀌었고, 기존 외관상의
+단일 셀 엄격 패턴은 유지되지 않았다. 따라서 ``전형'' 분류는 사용된 메타데이터 연산자에 조건부인 분류이며,
+위성 스트레스가 없는 일반 상태라는 물리적 해석으로 곧장 사용해서는 안 된다.
+
+다섯째, 본 결과는 Starlink 유사 UEMR의 일반적 안전성을 주장하지 않는다. 본 연구는 시험된 주입 영역과
+단순화된 HERA 유사 QA 파이프라인에서 빔-강건 윈도우 적분 밴드파워 오염을 검출하지 못했다는
+제한된 음성 결과와, 빈 전체 메타데이터 수정이 결과 해석을 바꿀 수 있다는 방법론적 경고를 함께 제시한다.
+실제 생산 수준 HERA 검증은 전체 $k_\perp$--$k_\parallel$ 전파,
+열잡음 공분산, 중복도 가중치, LST 빈 묶음, 신호 손실 보정, 보정/계통오차
+모델링을 포함해야 한다.
+
+마지막으로, 본 연구의 새로움은 Starlink UEMR 자체의 최초 보고가 아니라 QA 판정 계층의 명시적 분리이다.
+Di Vruno 등과 Bassa 등 계열 연구는 저주파 배열에서 Starlink UEMR의 존재와 스펙트럼 구조를 관측적으로 제시한다
+\citep{divruno2023,bassa2024}. 반면 본 연구는 그러한 문헌 기반 UEMR 구조가 HERA 유사 지연 스펙트럼 QA에서
+어떤 통계량으로 남는지를 묻는다. HERA 상한 및 잭나이프/영가설 검정 계열 연구는 밴드파워, PTE, 종단간 모의실험,
+계통오차 모델링을 결합하여 최종 우주론 산출물을 검증한다 \citep{abdurashidova2022,wilensky2019}. 본 연구의
+다단계 규칙은 그 생산 수준 검증을 대체하지 않고, 그 이전 단계에서 국소 최댓값 초과를 윈도우 적분 밴드파워 및
+빔-강건 오염 주장으로 과대해석하지 않도록 분류하는 생산 전(pre-production) QA 계층으로 위치한다.
+
+\subsection{제한점}
+\label{sec:discussion:limitations}
+
+본 연구의 가장 중요한 제한점은 배경 실현 분산을 충분히 표본화하지 못했다는 점이다. 커버리지 검정은
+2차원 층화추출로 고른 9개 native HERA H6C EW-like 기선을 사용하지만, 이들은 같은 관측/처리 계열과
+동일한 Jan 2026 TLE 재매핑 가정 아래 평가된다. 따라서 초록과 결론의 음성 결과는 반드시 이 배경 실현,
+단순화된 지연 스펙트럼 QA 연산자, 선택된 LST 커버리지, 그리고 사용한 빔 모델에 조건부이다. 특히 ``다른 HERA 관측 시즌, 다른 LST 범위, 다른 플래깅
+상태에서도 동일한 후보 수가 나오는가''라는 질문에는 현재 실험만으로 답할 수 없다. 본 논문의 음성 결과는 Starlink 유사 UEMR의
+일반적 안전성 주장이 아니라, 주어진 조건에서 빔-강건 윈도우 적분 오염이 검출되지 않았다는 제한된 QA 결과로 해석해야 한다.
+
+두 번째 제한점은 시행들이 독립적인 우주론 실현이 아니라는 점이다. 기선, 형태학, 플럭스, 빔 연산자, LST 빈은
+동일한 배경과 처리 가정을 공유한다. 따라서 $648\times0.01$ 기대 가짜 양성 계산은 엄밀한 가족 단위
+오류율(family-wise error rate) 보정이 아니다. 이 계산은 전체 후보 수의 규모를 확인하는 보조 참고값으로만 사용한다.
+향후 분석에서는 전 그리드 최댓값 통계량, 순열 기반 보정, 또는 계층적 배경 모델을 사용해 그리드 전체의
+오경보 확률을 직접 보정할 필요가 있다.
+
+세 번째 제한점은 대응-영가설의 구현 방식과 실험별 해석 차이이다. 통제 그리드에서는 적분 시간당 하나의 독립 위상을
+적용하는 per-time 위상 스크램블을 사용하므로 스펙트럼 결맞음(지연 스파이크)이 보존된다. 커버리지 검정에서는
+위성별 하나의 전역 위상 스칼라를 적용하는 per-satellite 위상 무작위화를 사용하므로, 각 위성의 지연--시간
+코히런트 구조 전체가 영가설에서도 보존된다. 두 경우 모두, 영가설은 ``UEMR 신호가 없다''는 영가설이 아니라
+``결맞은 조직화가 위상 무작위화 대조군보다 얼마나 드문가''를 측정하는 조건부 스트레스 테스트이다. 특히 커버리지
+단일 위성 시행의 영가설에서는 배경--위성 교차항 위상만 달라지며, $PTE_{\rm global}$는 결맞음 교차항 기여가
+위상 무작위화 대조군보다 통계적으로 극단적인지를 묻는 지표이다.
+이 구분은 본 연구의 비검출 서술과 판정 계층 해석에 필수적이다.
+
+네 번째 제한점은 절대 편향 게이트의 물리적 캘리브레이션이다. 본 연구에서 보고된 $B_{\rm floor}$ 값들은 이 단순화된 지연 스펙트럼 QA 연산자 내에서 상대적인 EoR 윈도우 편향에 대한 무차원 임계값이다. 즉, $\mathrm{mK}^2$ 단위의 직접적인 HERA 우주론적 상한 임계값이 아니다. $B_{\rm floor}=10^{-2}$와 같은 값을 실제 파워 스펙트럼 허용 오차에 매핑하려면, 대상 분석에 대한 전체 밴드파워 정규화, 열잡음 공분산, 신호 손실 보정, 중복도 가중치, 그리고 보정 및 계통오차 예산이 필요하다. 운영 측면에서 이 임계값은 부분적인 윈도우 오염에 대한 보고 수준의 게이트로 해석되어야 하며, 실제 HERA 파이프라인에서는 유도된 편향이 각 $k_\perp$--$k_\parallel$ 빈에서 사전 지정된 밴드파워 오차 예산보다 하위(subdominant) 수준이 되도록 설정되어야 한다.
+
+다섯 번째 제한점은 kHz-comb 형태학에서 Doppler 편이 효과의 미반영이다. 본 주입 모델은 위성의 기하학적
+지연 $\tau_{\rm sat}(t)$를 결정론적으로 계산하지만, 시선 방향 거리 변화율(range rate $\dot{r}$)에서
+비롯되는 Doppler 주파수 편이는 스펙트럼에 반영하지 않는다. LEO Starlink 위성의 전형적 시선
+속도($\sim$7 km/s)는 150\,MHz 대역에서 $\dot{r}/c\,\nu \approx 3.5$\,kHz 수준의 편이를 만든다. 10분
+통과 동안 $\dot{r}$은 수 km/s 변화하므로 kHz-comb 라인은 관측 구간 내에서 수 kHz 드리프트하며,
+이는 kHz-comb 간격과 동급의 주파수 이동이다. 따라서 현재 주입은 kHz-comb 형태학의 시간적 위상
+결맞음을 과대평가할 수 있으며, 실제 Doppler drift가 적용되면 comb 라인의 시간 방향 탈코히런스로
+인해 윈도우 기여가 감소할 가능성이 있다. 이 효과는 향후 주입 모델에 Doppler 추적을 추가하여
+정량화해야 한다.
+
+\section{결론}
+\label{sec:conclusion}
+
+본 원고는 다음의 결론을 지지한다.
+\begin{enumerate}
+  \item Starlink 유사 UEMR의 존재와 EoR 윈도우 밴드파워 오염은 동일하지 않으며, 처리 후 잔차는 국소, 윈도우 적분, 빔-강건 단계로 분리되어 평가되어야 한다.
+  \item 통제 그리드에서 국소 강건 z 플래그는 절대 편향 및 전역 PTE와 일대일로 대응하지 않았으며, $Z_{\rm PS,max}$ 단독은 오염 판정 기준으로 부적절하다.
+  \item LST 빈 위성 노출 메타데이터를 빈 전체 시간 표본 기준으로 수정하자 27개 선택된 층 항목 중 15개가 바뀌었고, 기존 외관상의 단일 셀 엄격 패턴은 유지되지 않았다.
+  \item 11시간 기선--LST 커버리지 검정에서 $B_{\rm rel}>10^{-3}$ 경계 근방 \NTailRefinedCases{}건을 $N_{\rm null}=1000$으로 재평가한 결과, 꼬리 정밀화된 엄격한 국소 최댓값 후보는 \NStrictLocalMax{}건이었다.
+  \item $PTE_{\rm global,absint}$ 특화 바닥값 재검증에서 $B_{\rm rel}>10^{-3}$인 \NAbsintRetainedN1000{}건이 $N_{\rm null}=1000$에서도 $PTE_{\rm global,absint}<0.01$로 확인되었으나, 짝지은 전체 PolyBeam 시행의 $PTE_{\rm global,absint}\ge0.02$로 빔-강건 기준을 통과하지 못하였다. 따라서 빔-강건 윈도우 적분 후보는 \NAbsintBeamRobust{}건이다.
+  \item 짝지은 전체 PolyBeam 엄격 후보는 \NFullPolyStrict{}건이고, 빔-강건 후보도 \NStrictBeamRobust{}건이었다.
+  \item 따라서 본 연구는 시험된 영역에서 Starlink 유사 UEMR의 빔-강건 윈도우 적분 EoR 윈도우 오염을 검출했다고 주장하지 않는다.
+  \item 본 연구의 방법론적 기여는 국소 최댓값 PTE, 절대 편향 기준값, 윈도우 적분 PTE, 전체 빔 강건성을 분리한 다단계 UEMR QA 판정 규칙을 제안하는 데 있다.
+\end{enumerate}
+
+요약하면, 본 연구는 Starlink 유사 UEMR이 곧바로 21-cm 파워 스펙트럼을 오염시킨다고 주장하지 않는다.
+시험된 HERA H6C native 9-baseline 조건과 주입 영역 안에서 빔-강건 윈도우 적분 오염은 검출되지 않았고,
+수정된 꼬리 정밀화 후 엄격한 국소 최댓값 후보도 남지 않았다.
+따라서 본 연구의 기여는 빈 전체 위성 메타데이터, 꼬리 정밀화된 PTE, 절대 편향 기준값, 윈도우 적분 통계량,
+전체 빔 강건성을 함께 요구하는 다단계 QA 구조를 제시하는 데 있다.
+
+\section*{데이터 및 코드 가용성}
+재현성 코드, 설정 파일, 주입 실험 산출물 및 본 원고에서 인용한 결과 표는 GitHub 저장소
+\url{https://github.com/kimeujin03-droid/starlink_uemr}에서 제공한다. 제출 또는 출판 시점에는 해당 공개판을 Zenodo에
+아카이브하여 DOI를 부여하고, 원고에는 GitHub URL과 버전이 지정된 DOI를 함께 인용한다. 분석에 사용한 Python, NumPy, SciPy,
+pandas, Astropy, pyuvdata, healpy 및 hera\_sim의 정확한 버전, 운영체제, 난수 시드 정책, 그리고 $N_{\rm null}=100/1000$
+설정은 저장소의 \texttt{environment.yml}, \texttt{requirements.txt}, \texttt{REPRODUCIBILITY.md} 및 각 \texttt{config\_used.yaml}에 기록한다.
+원본 HERA 유사 배경 가시성이 재배포 불가능한 경우, 본문 그림과 표를 재생성할 수 있는 요약 CSV와 그림 생성 스크립트를 함께 제공한다.
+
+\section*{감사의 글}
+본 연구는 공개 HERA 파생 가시성 산출물과 순방향 주입 워크플로우를 위해 개발된 로컬 재현성 스크립트를 사용하였다.
+
+\bibliographystyle{elsarticle-harv}
+\bibliography{starlink_uemr_refs,starlink_uemr_stat_refs_additions}
+
+\end{document}

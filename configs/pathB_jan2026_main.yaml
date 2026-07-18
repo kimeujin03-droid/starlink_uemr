@@ -1,0 +1,126 @@
+# PathB Jan 1, 2026 experiment configuration
+# Observation: 2026-01-01 (JD remapped from HERA H6C 2022-10-08 data)
+# TLE: Starlink Jan 2026 catalog (pre-selected, zenith-passing satellites)
+# Four-flux update: active stress tiers are [10, 30, 300, 1000] Jy.
+# The older five-flux design comment below is retained only as historical context.
+# Design: 5 backgrounds × 3 baseline groups × 5 flux = 75 main-grid cases
+#         Phase 2B: 9 native baselines × 1 flux (100 Jy) = robustness
+#
+# Baseline group design from baseline.tex stratification:
+#   short  : representative 14.6 m  (stratum: short-low)
+#   mid    : representative 140.4 m (stratum: mid-low, file: 157_146)
+#   long   : representative 207.3 m (stratum: long-high, file: 23_80)
+#
+# Satellite selection: each background uses the satellite that passes
+#   nearest to zenith during that time window (see pre-selection above).
+#   All 5 selected satellites have peak altitude 82-89 deg (za < 10 deg),
+#   well within the HERA 14m Gaussian beam main lobe (FWHM ~10 deg @150 MHz).
+
+site:
+  lat_deg: -30.7215
+  lon_deg: 21.4283
+  elev_m:  1073.0
+
+backgrounds:
+  - id: bg_01_clean
+    path: examples/backgrounds_jan2026_real/bg_01_clean.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=600 (flag=8.9%);
+      JD remapped to 2026-01-01 02:00 UTC for Jan-2026 TLE; EoR band 110-190 MHz
+      every 3rd channel (219 ch); 60 integrations x 9.66s = 9.8 min.
+  - id: bg_02_moderate
+    path: examples/backgrounds_jan2026_real/bg_02_moderate.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=1500 (flag=8.8%);
+      JD remapped to 2026-01-01 04:00 UTC; different LST segment.
+  - id: bg_03_heavy
+    path: examples/backgrounds_jan2026_real/bg_03_heavy.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=3840 (flag=14.7%,
+      end-of-obs increased flagging); JD remapped to 2026-01-01 06:00 UTC.
+  - id: bg_04_proc_div
+    path: examples/backgrounds_jan2026_real/bg_04_proc_div.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=120 (flag=12.3%,
+      early obs); JD remapped to 2026-01-01 00:00 UTC; processing diversity.
+  - id: bg_05_lst_div
+    path: examples/backgrounds_jan2026_real/bg_05_lst_div.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=2700 (flag=9.2%);
+      JD remapped to 2026-01-01 08:00 UTC; LST diversity.
+
+# Baseline groups: 3 representative groups (one per length stratum)
+# Note: these are synthetic baseline-vector overrides applied to the 0_1 visibility.
+# The native baseline of the bg is 14.6m (0,1); horizon/window calculations use
+# the listed length. This is explicitly caveat-flagged as baseline_override=true.
+baseline_groups:
+  - id: short_14p6m
+    length_m: 14.6
+    orientation: EW
+    # stratum: short-low; tau_hor = 48.7 ns; EoR window widest
+  - id: mid_140m
+    length_m: 140.4
+    orientation: EW
+    # stratum: mid-low (matching 157_146 baseline); tau_hor = 468.3 ns
+  - id: long_207m
+    length_m: 207.3
+    orientation: EW
+    # stratum: long-high (matching 23_80 baseline); tau_hor = 691.5 ns
+
+starlink:
+  # Pre-selected TLE: 5 genuine Starlink LEO satellites (h~547-554 km, 53-deg incl)
+  # each with peak altitude 79-84 deg at HERA during the 5 background time windows.
+  # NORAD IDs: 46066, 51129, 52835, 54100, 54166 (all confirmed Starlink, Jan 2026 TLE).
+  tle_path: tle/starlink_jan2026_final5.tle
+  max_scan_satellites: 10
+  peak_alt_min_deg:  70.0   # require near-zenith pass for significant beam coupling
+  peak_alt_max_deg:  90.0
+  reference_flux_jy:   100.0
+  reference_range_km:  550.0
+  range_attenuation_mode: flux_density_1_over_r2
+  emission_model:
+    # Literature-anchored spectral template (Bassa et al. 2024, Di Vruno et al. 2023)
+    bassa_hba_window_flux_jy:  30.0   # broadband windows at 120, 161 MHz
+    narrowband_peak_flux_jy:   50.0   # unresolved LOFAR-reported narrowband UEMR lines
+    narrowband_lines_mhz: [125.0, 135.0, 150.0, 175.0]
+    include_reflection_control_line: false  # 143.05 MHz can be enabled as a radar-reflection-like control
+    intrinsic_line_width_hz: 12200.0
+    literature_comb_spacings_khz: [48.8, 50.0, 65.0, 97.5, 150.0, 220.0]
+    highres_channel_average: false
+    highres_df_khz: 1.0
+
+beam:
+  mode: gaussian
+  fwhm_deg_ref: 10.0          # HERA 14m dish at 150 MHz
+  freq_ref_hz:  150000000.0   # scales as lambda/D
+
+pipeline:
+  inpainting_surrogate:
+    enabled: false            # P0: no inpainting (baseline operator)
+    poly_order: 3
+    min_good_channels: 12
+  delay_filter:
+    enabled: true
+    taper: blackman_harris
+    buffer_ns: 100.0          # supra-horizon buffer Delta_tau_buf = 100 ns
+  fr_zero_notch:
+    enabled: false
+  mainlobe_fr_filter:
+    enabled: false
+
+metrics:
+  window:
+    taper: blackman_harris
+    buffer_ns: 100.0          # must match delay_filter.buffer_ns
+  phase_randomized_null:
+    n_trials: 100             # 100 for pilot and main grid; 500 for final claim cases
+    seed: 42
+    mode: per_time            # main-claim default: one phase per integration
+
+experiment:
+  flux_grid_jy: [10, 30, 300, 1000]

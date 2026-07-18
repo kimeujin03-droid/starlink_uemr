@@ -1,0 +1,2 @@
+n_pairs,n_frozen_only_candidate_pairs,n_full_only_candidate_pairs,n_pairs_candidate_mismatch,median_delta_Z_PS_max,median_delta_PTE_global_absint,median_delta_PTE_global_max,median_delta_relative_abs_bias
+324,13,1,14,-0.061742368721008356,0.0,0.0,0.00025262672698565

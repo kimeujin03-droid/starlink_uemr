@@ -1,0 +1,3 @@
+statistic,n_trials_total,n_trials_used,n_trials_missing_null_file,observed_min_p_native_denom101,observed_min_p_rescaled_denom100,boot_min_p_p05,boot_min_p_median,boot_min_p_p95,fwer_corrected_p_value,n_boot
+obs_max_bias,648,648,0,0.0099009900990099,0.01,0.01,0.01,0.01,0.9979800100999495,200000
+obs_abs_integrated,648,648,0,0.0099009900990099,0.01,0.01,0.01,0.01,0.9981250093749531,200000

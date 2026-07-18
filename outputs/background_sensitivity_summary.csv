@@ -1,0 +1,2 @@
+n_rows,n_cells,cell_median_Z_PS_range_min,cell_median_Z_PS_range_max,cell_p95_Z_PS_max,cell_min_PTE_global_max,cell_median_Brel_range_min,cell_median_Brel_range_max,cell_p95_Brel_max,n_cells_with_statistical_candidate,n_statistical_candidates_total,n_physical_1e2_candidates_total
+648,27,-1.381028996298681,1.3017461753045194,2.662317835931451,0.0099009900990099,0.0,0.0261095511949216,0.6096169107200469,1,1,0

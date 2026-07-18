@@ -1,0 +1,65 @@
+{
+  "out": "za_sweep_current_operator.csv",
+  "summary_out": "za_sweep_current_operator_summary.csv",
+  "n_cases": 210,
+  "n_background": 5,
+  "n_null": 100,
+  "za_values": [
+    5.0,
+    15.0,
+    30.0,
+    45.0,
+    60.0,
+    70.0,
+    78.0
+  ],
+  "baselines_m": [
+    14.6,
+    140.4,
+    207.3
+  ],
+  "beams": [
+    "full_polybeam",
+    "unity_beam"
+  ],
+  "s_ref_jy": 300.0,
+  "height_km": 550.0,
+  "elapsed_s": 421.15897703170776,
+  "background_rows": [
+    {
+      "baseline_id": "0_1",
+      "lst_stratum": "quiet",
+      "lst_bin_id": 17,
+      "source_uvh5": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\zen.LST.baseline.0_1.sum.uvh5",
+      "flag_fraction": 0.1657111055107527
+    },
+    {
+      "baseline_id": "11_10",
+      "lst_stratum": "quiet",
+      "lst_bin_id": 16,
+      "source_uvh5": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\zen.LST.baseline.11_10.sum.uvh5",
+      "flag_fraction": 0.1708459341397849
+    },
+    {
+      "baseline_id": "159_76",
+      "lst_stratum": "typical",
+      "lst_bin_id": 44,
+      "source_uvh5": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\zen.LST.baseline.159_76.sum.uvh5",
+      "flag_fraction": 0.1653015793010752
+    },
+    {
+      "baseline_id": "4_196",
+      "lst_stratum": "typical",
+      "lst_bin_id": 53,
+      "source_uvh5": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\zen.LST.baseline.4_196.sum.uvh5",
+      "flag_fraction": 0.1665616599462365
+    },
+    {
+      "baseline_id": "82_0",
+      "lst_stratum": "typical",
+      "lst_bin_id": 18,
+      "source_uvh5": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\zen.LST.baseline.82_0.sum.uvh5",
+      "flag_fraction": 0.1651755712365591
+    }
+  ]
+}

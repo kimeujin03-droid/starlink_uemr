@@ -1,0 +1,23 @@
+name: starlink-uemr-qa
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy>=1.24
+  - pandas>=2.0
+  - scipy>=1.10
+  - matplotlib>=3.7
+  - pyyaml>=6.0
+  - h5py>=3.10
+  - astropy>=6.0
+  - statsmodels>=0.14
+  - joblib>=1.3
+  - requests>=2.31
+  - beautifulsoup4>=4.12
+  - skyfield>=1.46
+  - pip
+  - pip:
+      - pyuvdata>=3.0
+      - hdf5plugin>=4.0
+      # Optional for full PolyBeam reruns:
+      # - hera-sim>=4.3

@@ -1,0 +1,50 @@
+bin_minutes: 10
+epsilon: 1.0e-12
+
+lst_strata:
+  - quiet
+  - typical
+  - stress
+
+morphologies:
+  - smooth
+  - lines
+  - khz_comb
+
+flux_jy:
+  - 10
+  - 30
+  - 300
+  - 1000
+
+multiplicity:
+  - single
+  - multi
+
+beam_models:
+  - frozen_polybeam
+  - full_polybeam
+
+pte_thresholds:
+  exploratory: 0.05
+  strict: 0.01
+
+z_thresholds:
+  exploratory: 3.0
+
+bias_floors:
+  - 1.0e-8
+  - 1.0e-7
+  - 1.0e-6
+  - 1.0e-5
+  - 1.0e-4
+  - 1.0e-3
+  - 1.0e-2
+  - 1.0e-1
+
+n_null: 100
+target_utc: "2026-01-01T00:00:00"
+tle_path: tle/starlink_jan2026.txt
+alt_visible_deg: 70.0
+max_multi_satellites: 12
+max_tle_records: 6364

@@ -1,0 +1,103 @@
+# Path B Jan 1, 2026 beam-ablation configuration
+# Same as the PolyBeam robustness config, but the PolyBeam is evaluated
+# at a fixed 150 MHz for every frequency channel to remove beam chromaticity.
+
+site:
+  lat_deg: -30.7215
+  lon_deg: 21.4283
+  elev_m: 1073.0
+
+backgrounds:
+  - id: bg_01_clean
+    path: examples/backgrounds_jan2026_real/bg_01_clean.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=600 (flag=8.9%);
+      JD remapped to 2026-01-01 02:00 UTC for Jan-2026 TLE; EoR band 110-190 MHz
+      every 3rd channel (219 ch); 60 integrations x 9.66 s = 9.8 min.
+  - id: bg_02_moderate
+    path: examples/backgrounds_jan2026_real/bg_02_moderate.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=1500 (flag=8.8%);
+      JD remapped to 2026-01-01 04:00 UTC; different LST segment.
+  - id: bg_03_heavy
+    path: examples/backgrounds_jan2026_real/bg_03_heavy.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=3840 (flag=14.7%,
+      end-of-obs increased flagging); JD remapped to 2026-01-01 06:00 UTC.
+  - id: bg_04_proc_div
+    path: examples/backgrounds_jan2026_real/bg_04_proc_div.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=120 (flag=12.3%,
+      early obs); JD remapped to 2026-01-01 00:00 UTC; processing diversity.
+  - id: bg_05_lst_div
+    path: examples/backgrounds_jan2026_real/bg_05_lst_div.npz
+    product: HERA_real_H6C_JDremapped
+    processing_history: >
+      Real HERA H6C zen.LST.baseline.0_1.sum.uvh5; t_start=2700 (flag=9.2%);
+      JD remapped to 2026-01-01 08:00 UTC; LST diversity.
+
+baseline_groups:
+  - id: short_14p6m
+    length_m: 14.6
+    orientation: EW
+  - id: mid_140m
+    length_m: 140.4
+    orientation: EW
+  - id: long_207m
+    length_m: 207.3
+    orientation: EW
+
+starlink:
+  tle_path: tle/starlink_jan2026_final5.tle
+  max_scan_satellites: 10
+  peak_alt_min_deg: 70.0
+  peak_alt_max_deg: 90.0
+  reference_flux_jy: 100.0
+  reference_range_km: 550.0
+  range_attenuation_mode: flux_density_1_over_r2
+  emission_model:
+    bassa_hba_window_flux_jy: 30.0
+    narrowband_peak_flux_jy: 50.0
+    narrowband_lines_mhz: [125.0, 135.0, 150.0, 175.0]
+    include_reflection_control_line: false
+    intrinsic_line_width_hz: 12200.0
+    literature_comb_spacings_khz: [48.8, 50.0, 65.0, 97.5, 150.0, 220.0]
+    highres_channel_average: false
+    highres_df_khz: 1.0
+
+beam:
+  mode: hera_poly
+  strict_polybeam: true
+  fixed_eval_freq_hz: 150000000.0
+  fwhm_deg_ref: 10.0
+  freq_ref_hz: 150000000.0
+
+pipeline:
+  inpainting_surrogate:
+    enabled: false
+    poly_order: 3
+    min_good_channels: 12
+  delay_filter:
+    enabled: true
+    taper: blackman_harris
+    buffer_ns: 100.0
+  fr_zero_notch:
+    enabled: false
+  mainlobe_fr_filter:
+    enabled: false
+
+metrics:
+  window:
+    taper: blackman_harris
+    buffer_ns: 100.0
+  phase_randomized_null:
+    n_trials: 100
+    seed: 42
+    mode: per_time
+
+experiment:
+  flux_grid_jy: [10, 30, 300, 1000]

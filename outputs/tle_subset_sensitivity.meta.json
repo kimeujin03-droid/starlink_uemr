@@ -1,0 +1,12 @@
+{
+  "tle": "tle/starlink_jan2026_LEO_only.tle",
+  "selection": "outputs/lst_bin_selection.csv",
+  "config": "configs/coverage_robustness.yaml",
+  "n_tle_records_all": 6364,
+  "subset_size": 1200,
+  "n_random": 5,
+  "seed": 20260618,
+  "n_time_per_bin": 16,
+  "alt_visible_deg": 70.0,
+  "time_note": "Per-bin times are reconstructed from lst_start/lst_end in outputs/lst_bin_selection.csv."
+}

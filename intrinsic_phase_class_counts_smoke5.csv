@@ -1,0 +1,12 @@
+paired_case_id,beam_model,final_class,count
+11_10_lst016_quiet_khz_comb_S1000_multi,frozen_polybeam,no strict excess,5
+11_10_lst016_quiet_khz_comb_S1000_multi,full_polybeam,no strict excess,5
+11_10_lst016_quiet_lines_S1000_multi,frozen_polybeam,no strict excess,5
+11_10_lst016_quiet_lines_S1000_multi,full_polybeam,no strict excess,5
+11_10_lst016_quiet_smooth_S1000_multi,frozen_polybeam,no strict excess,5
+11_10_lst016_quiet_smooth_S1000_multi,full_polybeam,no strict excess,5
+11_10_lst016_quiet_smooth_S1000_single,frozen_polybeam,no strict excess,5
+11_10_lst016_quiet_smooth_S1000_single,full_polybeam,integrated physical,1
+11_10_lst016_quiet_smooth_S1000_single,full_polybeam,no strict excess,4
+4_196_lst053_typical_lines_S1000_multi,frozen_polybeam,no strict excess,5
+4_196_lst053_typical_lines_S1000_multi,full_polybeam,no strict excess,5

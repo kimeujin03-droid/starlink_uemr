@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the associated manuscript."
+title: "Starlink-like UEMR QA for 21-cm Delay-Spectrum Analyses"
+authors:
+  - family-names: "Kim"
+    given-names: "Euijin"
+repository-code: "https://github.com/kimeujin03-droid/starlink_uemr"
+date-released: 2026-06-08
+version: "coverage-pte-release"

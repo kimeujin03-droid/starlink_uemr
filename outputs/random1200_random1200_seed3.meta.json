@@ -1,0 +1,13 @@
+{
+  "elapsed_sec": 1095.6,
+  "selection": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\paper_final_experiment_check\\outputs\\lst_bin_selection.csv",
+  "config": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\paper_final_experiment_check\\outputs\\random1200_random1200_seed3.yaml",
+  "pathb_config": "C:\\Users\\kimeu\\Downloads\\starlink_pathB_wsl_package_v0_3_clean\\starlink_pathB\\paper_final_experiment_check\\configs\\pathB_jan2026_main.yaml",
+  "tle_meta": {
+    "tle_records_loaded_fast": 1200,
+    "tle_selection": "first_records_in_file_for_coverage_grid"
+  },
+  "planned_trials": 648,
+  "written_trials": 648,
+  "pte_definition": "PTE=(1 + count(null_global_stat >= obs_global_stat)) / (N_null + 1)"
+}

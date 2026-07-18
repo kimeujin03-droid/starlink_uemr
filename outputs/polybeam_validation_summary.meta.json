@@ -1,0 +1,57 @@
+{
+  "freq_min_mhz": 110.0,
+  "freq_max_mhz": 190.0,
+  "n_freq": 219,
+  "n_za": 181,
+  "full_meta": {
+    "mode": "hera_h2c_polybeam",
+    "beam_file": "HERA_H2C_BEAM_POLY.npy",
+    "spectral_index": -1.6755,
+    "ref_freq_mhz": 150.0,
+    "strict_polybeam": true,
+    "fixed_eval_freq_mhz": null,
+    "za30_150mhz_db": -24.770849261818675,
+    "za60_150mhz_db": -46.111147272863704,
+    "raw_power_min": 2.5675976177391515e-12,
+    "raw_power_max": 1.0,
+    "raw_power_p95": 0.31285197660539327,
+    "raw_power_p99": 0.8442909916314579,
+    "raw_power_nan_fraction": 0.0,
+    "clip_to_unit": true,
+    "clipped_fraction_after_sensitivity": 0.0
+  },
+  "frozen_meta": {
+    "mode": "hera_h2c_polybeam_frozenfreq",
+    "beam_file": "HERA_H2C_BEAM_POLY.npy",
+    "spectral_index": -1.6755,
+    "ref_freq_mhz": 150.0,
+    "strict_polybeam": true,
+    "fixed_eval_freq_mhz": 150.0,
+    "za30_150mhz_db": -24.770849261818675,
+    "za60_150mhz_db": -46.111147272863704,
+    "raw_power_min": 4.033507564274258e-08,
+    "raw_power_max": 1.0,
+    "raw_power_p95": 0.27169589494640556,
+    "raw_power_p99": 0.8737101871105458,
+    "raw_power_nan_fraction": 0.0,
+    "clip_to_unit": true,
+    "clipped_fraction_after_sensitivity": 0.0
+  },
+  "full_shape": [
+    181,
+    219
+  ],
+  "frozen_shape": [
+    181,
+    219
+  ],
+  "full_nan_fraction": 0.0,
+  "frozen_nan_fraction": 0.0,
+  "full_min": 2.5675976177391515e-12,
+  "full_max": 1.0,
+  "frozen_min": 4.033507564274258e-08,
+  "frozen_max": 1.0,
+  "full_fraction_gt_one": 0.0,
+  "frozen_fraction_gt_one": 0.0,
+  "normalization_note": "pathb.satellite.hera_polybeam normalizes each frequency by zenith power before optional clipping."
+}

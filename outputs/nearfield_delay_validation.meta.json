@@ -1,0 +1,10 @@
+{
+  "tle": "tle/starlink_jan2026_LEO_only.tle",
+  "max_tle_records": 1200,
+  "selection": "outputs/lst_bin_selection.csv",
+  "n_time": 62,
+  "alt_visible_deg": 70.0,
+  "max_satellites_per_cell": 12,
+  "plane_wave_formula": "tau_plane = -dot(baseline_enu, unit_sat_enu) / c",
+  "near_field_formula": "tau_near = (|sat_enu - baseline_enu| - |sat_enu|) / c"
+}

@@ -1,0 +1,6 @@
+{
+  "PTE_global_max": "Pr_null(max_window_bias >= observed max_window_bias)",
+  "PTE_global_absint": "Pr_null(abs_integrated_window_bias >= observed abs_integrated_window_bias)",
+  "finite_null_correction": "PTE=(1 + count(null >= obs)) / (N_null + 1)",
+  "null_global_stats_dir": "results\\revision_bandpower_propagation_v3_pte\\null_global_stats"
+}

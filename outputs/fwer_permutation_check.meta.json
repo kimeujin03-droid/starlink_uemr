@@ -1,0 +1,33 @@
+{
+  "description": "Bootstrap approximation of the family-wise minimum-p null distribution for the 648-row all_available coverage grid, using each trial's own stored N_null=100 matched-null draws (leave-one-out p-values), resampled assuming trial independence.",
+  "caveat": "Resamples each of the 648 trials independently; does not reproduce the real positive correlation between trials sharing a background cell/beam/geometry. Lightweight approximation, not an exact joint permutation test.",
+  "n_boot": 200000,
+  "results": [
+    {
+      "statistic": "obs_max_bias",
+      "n_trials_total": 648,
+      "n_trials_used": 648,
+      "n_trials_missing_null_file": 0,
+      "observed_min_p_native_denom101": 0.0099009900990099,
+      "observed_min_p_rescaled_denom100": 0.01,
+      "boot_min_p_p05": 0.01,
+      "boot_min_p_median": 0.01,
+      "boot_min_p_p95": 0.01,
+      "fwer_corrected_p_value": 0.9979800100999495,
+      "n_boot": 200000
+    },
+    {
+      "statistic": "obs_abs_integrated",
+      "n_trials_total": 648,
+      "n_trials_used": 648,
+      "n_trials_missing_null_file": 0,
+      "observed_min_p_native_denom101": 0.0099009900990099,
+      "observed_min_p_rescaled_denom100": 0.01,
+      "boot_min_p_p05": 0.01,
+      "boot_min_p_median": 0.01,
+      "boot_min_p_p95": 0.01,
+      "fwer_corrected_p_value": 0.9981250093749531,
+      "n_boot": 200000
+    }
+  ]
+}

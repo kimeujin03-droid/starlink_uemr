@@ -1,0 +1,19 @@
+{
+  "description": "10-seed calibration-residual stability check for the 5 full-catalog physical candidates, at the strongest tested stress amplitude (sigma_cal=1e-2) for white and smooth/chromatic residuals",
+  "n_seeds": 10,
+  "settings": [
+    {
+      "model": "white",
+      "sigma_cal": 0.01,
+      "ell_nu_mhz": null
+    },
+    {
+      "model": "smooth",
+      "sigma_cal": 0.01,
+      "ell_nu_mhz": 1.0
+    }
+  ],
+  "n_rows": 100,
+  "all_classes_stable": false,
+  "elapsed_sec": 3112.9
+}

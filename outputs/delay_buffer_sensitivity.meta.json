@@ -1,0 +1,13 @@
+{
+  "n_null": 100,
+  "buffers_ns": [
+    0.0,
+    50.0,
+    100.0,
+    150.0,
+    200.0
+  ],
+  "max_cases": 1,
+  "case_selection": "candidate_statistical OR exploratory OR PS_gt_3, then highest Z_PS_max",
+  "scope": "representative-case sensitivity, not full 648-row grid rerun"
+}

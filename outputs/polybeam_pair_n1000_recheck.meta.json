@@ -1,0 +1,12 @@
+{
+  "description": "N=1000 re-evaluation of the full_polybeam side of the 2 first1200 absint floor-hit candidates",
+  "tle_meta": {
+    "tle_records_loaded_fast": 1200,
+    "tle_selection": "first_records_in_file_for_coverage_grid"
+  },
+  "baseline_id": "11_10",
+  "lst_stratum": "quiet",
+  "lst_bin_id": 16,
+  "n_null": 1000,
+  "n_beam_robust": 0
+}

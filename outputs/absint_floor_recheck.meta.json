@@ -1,0 +1,13 @@
+{
+  "description": "N=1000 re-evaluation of absint PTE floor-hit cases",
+  "tle_meta": {
+    "tle_records_loaded_fast": 1200,
+    "tle_selection": "first_records_in_file_for_coverage_grid"
+  },
+  "baseline_id": "11_10",
+  "lst_stratum": "quiet",
+  "lst_bin_id": 16,
+  "n_null": 1000,
+  "floor_hit_value_N100": 0.0099009901,
+  "above_brel_1e3_retained_absint": 2
+}

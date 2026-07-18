@@ -1,0 +1,33 @@
+residual_model,sigma_cal,ell_nu_mhz,final_class,n_cases
+smooth,0.0,0.5,local-only QA candidate,1
+smooth,0.0,0.5,window-integrated candidate,6
+smooth,0.0,1.0,local-only QA candidate,1
+smooth,0.0,1.0,window-integrated candidate,6
+smooth,0.0,5.0,local-only QA candidate,1
+smooth,0.0,5.0,window-integrated candidate,6
+smooth,0.0001,0.5,local-only QA candidate,1
+smooth,0.0001,0.5,window-integrated candidate,6
+smooth,0.0001,1.0,local-only QA candidate,1
+smooth,0.0001,1.0,window-integrated candidate,6
+smooth,0.0001,5.0,local-only QA candidate,1
+smooth,0.0001,5.0,window-integrated candidate,6
+smooth,0.001,0.5,local-only QA candidate,1
+smooth,0.001,0.5,window-integrated candidate,6
+smooth,0.001,1.0,local-only QA candidate,1
+smooth,0.001,1.0,window-integrated candidate,6
+smooth,0.001,5.0,local-only QA candidate,1
+smooth,0.001,5.0,window-integrated candidate,6
+smooth,0.01,0.5,local-only QA candidate,1
+smooth,0.01,0.5,window-integrated candidate,6
+smooth,0.01,1.0,local-only QA candidate,1
+smooth,0.01,1.0,window-integrated candidate,6
+smooth,0.01,5.0,local-only QA candidate,1
+smooth,0.01,5.0,window-integrated candidate,6
+white,0.0,,local-only QA candidate,1
+white,0.0,,window-integrated candidate,6
+white,0.0001,,local-only QA candidate,1
+white,0.0001,,window-integrated candidate,6
+white,0.001,,local-only QA candidate,1
+white,0.001,,window-integrated candidate,6
+white,0.01,,local-only QA candidate,1
+white,0.01,,window-integrated candidate,6

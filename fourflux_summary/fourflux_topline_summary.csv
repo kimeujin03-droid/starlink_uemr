@@ -1,0 +1,2 @@
+n_rows,n_pairs,n_strict_local,n_strict_absint,n_local_physical_1e3,n_absint_physical_1e3,n_beam_robust_local_physical_1e3,n_frozen_only_local_physical_1e3,n_full_only_local_physical_1e3,n_beam_robust_absint_physical_1e3,n_frozen_only_absint_physical_1e3,n_full_only_absint_physical_1e3,n_local_tail_candidates_for_n1000,n_absint_tail_candidates_for_n1000
+1296,648,30,74,11,57,4,1,2,10,27,10,60,126

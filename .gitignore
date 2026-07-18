@@ -1,0 +1,38 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.pdfsync
+*.synctex.gz
+*.toc
+
+# Local environments
+.venv/
+.venv*/
+env/
+
+# Large/local raw data
+data/raw/
+*.uvh5
+*.h5
+*.npz
+
+# Heavy intermediate outputs
+outputs/tmp/
+outputs/cache/
+outputs/coverage_null_global_stats/
+coverage_null_global_stats_fourflux/
+results/**/null_global_stats/
+
+# External raw inputs not redistributed with this manuscript archive
+# (see REPRODUCIBILITY.md: code + configs + summary CSVs + figures only)
+tle/

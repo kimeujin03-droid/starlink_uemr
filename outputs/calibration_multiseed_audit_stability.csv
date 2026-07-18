@@ -1,0 +1,11 @@
+case,residual_model,n_distinct_classes_over_10_seeds
+1,smooth,1
+1,white,1
+2,smooth,1
+2,white,2
+3,smooth,1
+3,white,1
+4,smooth,1
+4,white,1
+5,smooth,1
+5,white,1

@@ -1,0 +1,10 @@
+doppler_mode,final_class,n_cases
+constant,beam-sensitive candidate,1
+constant,local-only QA candidate,1
+constant,window-integrated candidate,3
+linear,beam-sensitive candidate,1
+linear,local-only QA candidate,1
+linear,window-integrated candidate,3
+none,beam-sensitive candidate,1
+none,local-only QA candidate,1
+none,window-integrated candidate,3
